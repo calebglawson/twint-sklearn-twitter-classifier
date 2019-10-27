@@ -15,7 +15,7 @@ def fetch_data(database):
 
     df_bkp = df
     df = df[['following_watchlist', 'watchlist_completion', 'likes_watchlist', 'retweets_watchlist',
-             'mentions_watchlist', 'tweet_watchword_ratio', 'neg', 'neu', 'pos', 'compound', 'watchword_in_bio']]
+             'mentions_watchlist', 'watchword_in_bio']]
 
     conn.close()
 

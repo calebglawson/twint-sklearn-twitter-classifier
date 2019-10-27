@@ -1,4 +1,3 @@
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import argparse
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ def create_connection(db_file):
 
 def create(conn):
     try:
-        sql = '''CREATE TABLE user_stats ( 	id	TEXT, 	username	TEXT, 	last_updated	INTEGER, 	following_watchlist	REAL, 	watchlist_completion	REAL, 	likes_watchlist	REAL, 	retweets_watchlist	REAL, 	mentions_watchlist	REAL, tweet_watchword_ratio REAL, neg REAL, neu REAL, pos REAL, compound REAL, watchword_in_bio INGEGER, 	is_on_watchlist	INTEGER, 	PRIMARY KEY(id) )'''
+        sql = '''CREATE TABLE user_stats ( 	id	TEXT, 	username	TEXT, 	last_updated	INTEGER, 	following_watchlist	REAL, 	watchlist_completion	REAL, 	likes_watchlist	REAL, 	retweets_watchlist	REAL, 	mentions_watchlist	REAL, watchword_in_bio INGEGER, 	is_on_watchlist	INTEGER, 	PRIMARY KEY(id) )'''
         cur = conn.cursor()
         cur.execute(sql)
     except:
@@ -25,7 +24,7 @@ def create(conn):
 
 def insert(conn, user_stats):
     try:
-        sql = '''INSERT INTO user_stats (id,username,last_updated,following_watchlist,watchlist_completion,likes_watchlist,retweets_watchlist,mentions_watchlist, tweet_watchword_ratio, neg, neu, pos, compound, watchword_in_bio, is_on_watchlist) VALUES (?,?,current_timestamp,?,?,?,?,?,?,?,?,?,?,?,?)'''
+        sql = '''INSERT INTO user_stats (id,username,last_updated,following_watchlist,watchlist_completion,likes_watchlist,retweets_watchlist,mentions_watchlist, watchword_in_bio, is_on_watchlist) VALUES (?,?,current_timestamp,?,?,?,?,?,?,?)'''
         cur = conn.cursor()
         cur.execute(sql, user_stats)
     except:
@@ -34,7 +33,7 @@ def insert(conn, user_stats):
 
 def update(conn, user_stats):
     try:
-        sql = '''UPDATE user_stats SET username = ?, last_updated = current_timestamp, following_watchlist = ?, watchlist_completion = ?, likes_watchlist = ?, retweets_watchlist = ?, mentions_watchlist = ?, tweet_watchword_ratio = ?, neg = ?, neu = ?, pos = ?, compound = ?, watchword_in_bio = ?, is_on_watchlist = ? WHERE id = ?'''
+        sql = '''UPDATE user_stats SET username = ?, last_updated = current_timestamp, following_watchlist = ?, watchlist_completion = ?, likes_watchlist = ?, retweets_watchlist = ?, mentions_watchlist = ?, watchword_in_bio = ?, is_on_watchlist = ? WHERE id = ?'''
         cur = conn.cursor()
         cur.execute(sql, user_stats)
     except:
@@ -245,40 +244,12 @@ def fetch_tweets(username, limit, db):
     return retweets, mentions, all_tweets
 
 
-def calculate_tweet_stats(retweets, mentions, watchlist, all_tweets, watchwords):
+def calculate_tweet_stats(retweets, mentions, watchlist, all_tweets):
     watchlist_intersect_retweets = retweets[retweets["username"].isin(
         watchlist['screen_names'])]["username"].count() / len(retweets["username"])
 
     watchlist_intersect_mentions = mentions[mentions["username"].isin(
         watchlist['screen_names'])]["username"].count() / len(mentions["username"])
-
-    sid = SentimentIntensityAnalyzer()
-    neg = []
-    neu = []
-    pos = []
-    compound = []
-
-    tweet_watchword_count = 0
-    for tweet in all_tweets:
-        if len(watchwords) != 0:
-            for watchword in watchwords:
-                if watchword in tweet:
-                    tweet_watchword_count += 1
-                    break
-
-        scores = sid.polarity_scores(tweet)
-        neg.append(scores["neg"])
-        neu.append(scores["neu"])
-        pos.append(scores["pos"])
-        compound.append(scores["compound"])
-
-    neg_mean = np.mean(neg)
-    neu_mean = np.mean(neu)
-    pos_mean = np.mean(pos)
-    compound_mean = np.mean(compound)
-
-    tweet_watchword_ratio = tweet_watchword_count / \
-        len(all_tweets)
 
     if np.isnan(watchlist_intersect_retweets):
         watchlist_intersect_retweets = 0
@@ -286,29 +257,20 @@ def calculate_tweet_stats(retweets, mentions, watchlist, all_tweets, watchwords)
     if np.isnan(watchlist_intersect_mentions):
         watchlist_intersect_mentions = 0
 
-    if np.isnan(tweet_watchword_ratio):
-        tweet_watchword_ratio = 0
-
-    if np.isnan(neg_mean) or np.isnan(neu_mean) or np.isnan(pos_mean) or np.isnan(compound_mean):
-        neg_mean = 0
-        neu_mean = 0
-        pos_mean = 0
-        compound_mean = 0
-
-    return watchlist_intersect_retweets, watchlist_intersect_mentions, tweet_watchword_ratio, neg_mean, neu_mean, pos_mean, compound_mean
+    return watchlist_intersect_retweets, watchlist_intersect_mentions
 
 
-def tweets(username, limit, watchlist, watchwords, db):
+def tweets(username, limit, watchlist, db):
     try:
         retweets, mentions, all_tweets = fetch_tweets(username, limit, db)
-        watchlist_intersect_retweets, watchlist_intersect_mentions, tweet_watchword_ratio, neg, neu, pos, compound = calculate_tweet_stats(
-            retweets, mentions, watchlist, all_tweets, watchwords)
+        watchlist_intersect_retweets, watchlist_intersect_mentions = calculate_tweet_stats(
+            retweets, mentions, watchlist, all_tweets)
     except:
-        watchlist_intersect_retweets, watchlist_intersect_mentions, tweet_watchword_ratio, neg, neu, pos, compound = (
-            0, 0, 0, 0, 0, 0, 0)
+        watchlist_intersect_retweets, watchlist_intersect_mentions = (
+            0, 0)
         print("Failed to fetch tweets")
 
-    return watchlist_intersect_retweets, watchlist_intersect_mentions, tweet_watchword_ratio, neg, neu, pos, compound
+    return watchlist_intersect_retweets, watchlist_intersect_mentions
 
 
 def calculate_bio_stats(bio, watchwords):
@@ -333,8 +295,6 @@ parser.add_argument(
 parser.add_argument(
     "output", help="specify output database")
 parser.add_argument(
-    "--tweet_watchwords", help="list of watchwords to look for in tweets unique to the target group")
-parser.add_argument(
     "--bio_watchwords", help="list of watchwords to look for in tweets unique to the target group")
 parser.add_argument(
     "--fetch_limit", help="number of tweets to fetch when calculating statistics", default=100, type=int)
@@ -349,8 +309,6 @@ twint_db = args.output.replace(".db", "_twint_data.db")
 watchlist = import_csv(args.watchlist, "screen_names")
 intake = import_csv(args.input, "screen_names")
 
-
-tweet_watchwords = import_csv(args.tweet_watchwords, "watchwords")
 bio_watchwords = import_csv(args.bio_watchwords, "watchwords")
 
 if exists_table(db) != True:
@@ -369,8 +327,8 @@ for user in intake["screen_names"]:
         following_watchlist, watchlist_completion = following(
             user, following_count, watchlist, twint_db)
         likes_watchlist = likes(user, args.fetch_limit, watchlist, twint_db)
-        retweets_watchlist, mentions_watchlist, tweet_watchword_ratio, neg, neu, pos, compound = tweets(
-            user, args.fetch_limit, watchlist, tweet_watchwords, twint_db)
+        retweets_watchlist, mentions_watchlist = tweets(
+            user, args.fetch_limit, watchlist, twint_db)
         watchword_in_bio = calculate_bio_stats(bio, bio_watchwords)
 
         if user in watchlist['screen_names'].values:
@@ -378,14 +336,14 @@ for user in intake["screen_names"]:
         else:
             is_on_watchlist = 0
 
-        if is_on_watchlist == 0 or (is_on_watchlist == 1 and (following_watchlist != 0 or watchlist_completion != 0 or likes_watchlist != 0 or retweets_watchlist != 0 or mentions_watchlist != 0 or tweet_watchword_ratio != 0)):
+        if is_on_watchlist == 0 or (is_on_watchlist == 1 and (following_watchlist != 0 or watchlist_completion != 0 or likes_watchlist != 0 or retweets_watchlist != 0 or mentions_watchlist != 0)):
             if exists(db, (user_id,)):
                 user_row = (user, following_watchlist, watchlist_completion,
-                            likes_watchlist, retweets_watchlist, mentions_watchlist, tweet_watchword_ratio, neg, neu, pos, compound, watchword_in_bio, is_on_watchlist, user_id)
+                            likes_watchlist, retweets_watchlist, mentions_watchlist, watchword_in_bio, is_on_watchlist, user_id)
                 update(db, user_row)
             else:
                 user_row = (user_id, user, following_watchlist, watchlist_completion,
-                            likes_watchlist, retweets_watchlist, mentions_watchlist, tweet_watchword_ratio, neg, neu, pos, compound, watchword_in_bio, is_on_watchlist)
+                            likes_watchlist, retweets_watchlist, mentions_watchlist, watchword_in_bio, is_on_watchlist)
                 insert(db, user_row)
 
             db.commit()

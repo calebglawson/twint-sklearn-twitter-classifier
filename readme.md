@@ -1,24 +1,23 @@
 # Summary
 This project takes in a list of twitter accounts, collects stats, trains a classification model, predicts class based on stats, and returns the data collected to create the stats.
 
-**Remember, in order to make quality predictions with a machine learning model, you will need quality data. I have been able to achieve a 93% avg accuracy with this tool. With the right input, maybe you can, too.**
+**Remember, in order to make quality predictions with a machine learning model, you will need quality data. I have been able to achieve a 94% average accuracy with this tool. With the right input, maybe you can, too.**
 
 # Typical Workflow
 ## If You Do Not Have a Machine Learning Model
 1. Have a list of users that belong to the targed class, also known as a watchlist.
 2. Obtain a list with an equal number of users that are neutral / do not belong to the targeted class with fetch_followers.py **Example:** ```python .\fetch_followers.py example_user --filter .\watchlist.csv --output example_user_followers.csv --limit 800```
 3. Unify the lists.
-4. Run gather_data.py to fetch the stats, supply all of the script params in the command line. **Example:** ```python .\gather_data.py .\users.csv .\watchlist.csv results.db --tweet_watchwords .\tweet_watchwords.csv --bio_watchwords .\bio_watchwords.csv```
+4. Run gather_data.py to fetch the stats, supply all of the script params in the command line. **Example:** ```python .\gather_data.py .\users.csv .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv```
 5. Run generate_model.py on the fetched data to generate a model. **Example:** ```python .\generate_model.py .\results.db --model_output model.joblib --test_output test_results.csv```
 ## Once You Have a Machine Learning Model
-1. Run gather_data.py to fetch stats on a new set of users that you would like to use with the model. **Example:** ```python .\gather_data.py .\users.csv .\watchlist.csv results.db --tweet_watchwords .\tweet_watchwords.csv --bio_watchwords .\bio_watchwords.csv```
+1. Run gather_data.py to fetch stats on a new set of users that you would like to use with the model. **Example:** ```python .\gather_data.py .\users.csv .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv```
 2. Run predict.py on the new set of users and view the results. **Example: ** ```python .\predict.py .\results.db .\model.joblib --output results_predictions.csv```
-4. Run view_data.py for a subset of those users to view the evidence that lead to the conclusion. **Example:** ```python .\view_data.py .\results_twint_data.db .\watchlist.csv --watchwords .\tweet_watchwords.csv --username example_user```
+4. Run view_data.py for a subset of those users to view the evidence that lead to the conclusion. **Example:** ```python .\view_data.py .\results_twint_data.db .\watchlist.csv --tweet_watchwords .\tweet_watchwords.csv --username example_user```
 
 # Required Libraries
 * argparse
 * joblib
-* nltk (and download corpora files)
 * numpy
 * pandas
 * scipy
@@ -61,7 +60,7 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 * bio_watchwords.csv
     * This is a list of words to watch for in a user's bio. Used to compute stats.
 * tweet_watchwords.csv
-    * This is a list of words to watch for in a user's tweets. Used to compute stats.
+    * This is a list of words to look for in a user's tweets. Used in data review only.
 * users.csv
     * This is an example input file for gather_data.py. Contains screen names.
 

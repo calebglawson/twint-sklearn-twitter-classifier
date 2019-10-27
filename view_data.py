@@ -1,5 +1,4 @@
 import argparse
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import numpy as np
 import os
 import pandas as pd
@@ -65,11 +64,6 @@ def get_watchlist_favorites(user_id, watchlist, db, filepath):
         str(user_id) + " and lower(t.screen_name) in " + str(watchlist)
     result = pd.read_sql_query(query, db)
 
-    sid = SentimentIntensityAnalyzer()
-    result["compound"] = result["tweet"].apply(
-        lambda x: sid.polarity_scores(x)["compound"])
-    result = result.sort_values(by=['compound'], ascending=True)
-
     if len(result.index) > 0:
         result.to_csv(filepath + "watchlist_favorites.csv")
 
@@ -81,18 +75,14 @@ def get_watchlist_mentions(user_id, watchlist, db, filepath):
         str(user_id) + " and mentions <> ''"
     result = pd.read_sql_query(query, db)
 
-    watchlist = list(watchlist)
+    if len(result.index) > 0:
+        watchlist = list(watchlist)
 
-    result["contains_watchlist"] = result["mentions"].apply(
-        lambda x: any([value for value in x.lower().split(',') if value in watchlist]))
+        result["contains_watchlist"] = result["mentions"].apply(
+            lambda x: any([value for value in x.lower().split(',') if value in watchlist]))
 
-    result = result[result["contains_watchlist"]].drop(
-        ["contains_watchlist"], axis=1)
-
-    sid = SentimentIntensityAnalyzer()
-    result["compound"] = result["tweet"].apply(
-        lambda x: sid.polarity_scores(x)["compound"])
-    result = result.sort_values(by=['compound'], ascending=True)
+        result = result[result["contains_watchlist"]].drop(
+            ["contains_watchlist"], axis=1)
 
     if len(result.index) > 0:
         result.to_csv(
@@ -105,11 +95,6 @@ def get_watchlist_retweets(user_id, watchlist, db, filepath):
     query = "select t.screen_name, t.tweet, t.date, t.time, t.timezone, t.replies_count, t.likes_count, t.retweets_count, t.link from retweets r join tweets t on r.tweet_id = t.id where r.user_id = " + \
         str(user_id) + " and lower(t.screen_name) in " + str(watchlist)
     result = pd.read_sql_query(query, db)
-
-    sid = SentimentIntensityAnalyzer()
-    result["compound"] = result["tweet"].apply(
-        lambda x: sid.polarity_scores(x)["compound"])
-    result = result.sort_values(by=['compound'], ascending=True)
 
     if len(result.index) > 0:
         result.to_csv(filepath + "watchlist_retweets.csv")
@@ -140,11 +125,6 @@ def get_watchword_tweets(user_id, watchwords, db, filepath):
 
     result = result[mask]
 
-    sid = SentimentIntensityAnalyzer()
-    result["compound"] = result["tweet"].apply(
-        lambda x: sid.polarity_scores(x)["compound"])
-    result = result.sort_values(by=['compound'], ascending=True)
-
     if len(result.index) > 0:
         result.to_csv(filepath + "tweets_with_watchwords.csv")
 
@@ -158,7 +138,7 @@ parser.add_argument(
     "database", help="db to fetch the data from")
 parser.add_argument("watchlist", help="csv file, users of interest")
 parser.add_argument(
-    "--watchwords", help="csv of watchwords to look for in tweets")
+    "--tweet_watchwords", help="csv of watchwords to look for in tweets")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument(
     '--username', help="username of single user to fetch data on")
@@ -179,7 +159,7 @@ if args.input_file != None:
     users = users["screen_names"].values
 
 db = connect_to_db(args.database)
-watchwords = load_csv(args.watchwords, "watchwords")
+watchwords = load_csv(args.tweet_watchwords, "watchwords")
 watchlist = load_watchlist(args.watchlist, "screen_names")
 
 for user in users:

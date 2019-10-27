@@ -18,7 +18,7 @@ def fetch_data(database):
     df_bkp = df
 
     # Remove the non-numeric types from the DF.
-    df = df[['following_watchlist', 'watchlist_completion', 'likes_watchlist', 'retweets_watchlist', 'mentions_watchlist', 'tweet_watchword_ratio', 'neg', 'neu', 'pos', 'compound', 'watchword_in_bio',
+    df = df[['following_watchlist', 'watchlist_completion', 'likes_watchlist', 'retweets_watchlist', 'mentions_watchlist', 'watchword_in_bio',
              'is_on_watchlist']]
 
     conn.close()
