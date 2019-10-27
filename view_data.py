@@ -132,60 +132,62 @@ def get_watchword_tweets(user_id, watchwords, db, filepath):
 
 
 # MAIN
-parser = argparse.ArgumentParser()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
 
-parser.add_argument(
-    "database", help="db to fetch the data from")
-parser.add_argument("watchlist", help="csv file, users of interest")
-parser.add_argument(
-    "--tweet_watchwords", help="csv of watchwords to look for in tweets")
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument(
-    '--username', help="username of single user to fetch data on")
-group.add_argument(
-    '--input_file',  help="csv containing usernames to fetch data on")
+    parser.add_argument(
+        "database", help="db to fetch the data from")
+    parser.add_argument("watchlist", help="csv file, users of interest")
+    parser.add_argument(
+        "--tweet_watchwords", help="csv of watchwords to look for in tweets")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        '--username', help="username of single user to fetch data on")
+    group.add_argument(
+        '--input_file',  help="csv containing usernames to fetch data on")
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-if "_twint_data.db" not in args.database:
-    args.database = args.database[:-3] + "_twint_data.db"
-    print(args.database)
+    if "_twint_data.db" not in args.database:
+        args.database = args.database[:-3] + "_twint_data.db"
+        print(args.database)
 
-if args.username != None:
-    users = [args.username]
+    if args.username != None:
+        users = [args.username]
 
-if args.input_file != None:
-    users = load_csv(args.input_file, "screen_names")
-    users = users["screen_names"].values
+    if args.input_file != None:
+        users = load_csv(args.input_file, "screen_names")
+        users = users["screen_names"].values
 
-db = connect_to_db(args.database)
-watchwords = load_csv(args.tweet_watchwords, "watchwords")
-watchlist = load_watchlist(args.watchlist, "screen_names")
+    db = connect_to_db(args.database)
+    watchwords = load_csv(args.tweet_watchwords, "watchwords")
+    watchlist = load_watchlist(args.watchlist, "screen_names")
 
-for user in users:
-    user = user.lower()
-    filepath = "./" + user + "/"
+    for user in users:
+        user = user.lower()
+        filepath = "./" + user + "/"
 
-    if not os.path.exists(filepath):
-        os.mkdir(filepath)
+        if not os.path.exists(filepath):
+            os.mkdir(filepath)
 
-    user_id = get_user(user, db, filepath)
-    following_watchlist = get_following_watchlist(
-        user, watchlist, db, filepath)
-    watchlist_favorites = get_watchlist_favorites(
-        user_id, watchlist, db, filepath)
-    watchlist_retweets = get_watchlist_retweets(
-        user_id, watchlist, db, filepath)
-    watchlist_mentions = get_watchlist_mentions(
-        user_id, watchlist, db, filepath)
-    watchword_tweets = get_watchword_tweets(user_id, watchwords, db, filepath)
+        user_id = get_user(user, db, filepath)
+        following_watchlist = get_following_watchlist(
+            user, watchlist, db, filepath)
+        watchlist_favorites = get_watchlist_favorites(
+            user_id, watchlist, db, filepath)
+        watchlist_retweets = get_watchlist_retweets(
+            user_id, watchlist, db, filepath)
+        watchlist_mentions = get_watchlist_mentions(
+            user_id, watchlist, db, filepath)
+        watchword_tweets = get_watchword_tweets(
+            user_id, watchwords, db, filepath)
 
-    print("\n" + user)
-    print("Watchlist follow count: " + str(following_watchlist))
-    print("Watchlist favorite count: " + str(watchlist_favorites))
-    print("Watchlist retweet count: " + str(watchlist_retweets))
-    print("Watchlist mention count: " + str(watchlist_mentions))
-    print("Watchword tweets: " + str(watchword_tweets))
+        print("\n" + user)
+        print("Watchlist follow count: " + str(following_watchlist))
+        print("Watchlist favorite count: " + str(watchlist_favorites))
+        print("Watchlist retweet count: " + str(watchlist_retweets))
+        print("Watchlist mention count: " + str(watchlist_mentions))
+        print("Watchword tweets: " + str(watchword_tweets))
 
-print("\nAll files output in working directory.")
-db.close()
+    print("\nAll files output in working directory.")
+    db.close()

@@ -88,37 +88,37 @@ def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_outpu
 
     print("Test results saved to: " + test_output)
 
+
 # MAIN
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "database", help="name of the db holding the twitter user stats and labels")
+    parser.add_argument(
+        "--C", help="C value param for SVC", type=float)
+    parser.add_argument(
+        "--gamma", help="gamma value param for SVC", type=float)
+    parser.add_argument(
+        "--n_iter", help="number of iterations for randomized optimal param search", type=int, default=50)
+    parser.add_argument(
+        "--model_output", help="filename of the output model", default="SVC")
+    parser.add_argument(
+        "--test_output", help="filename of the test results", default="test_results")
 
+    args = parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "database", help="name of the db holding the twitter user stats and labels")
-parser.add_argument(
-    "--C", help="C value param for SVC", type=float)
-parser.add_argument(
-    "--gamma", help="gamma value param for SVC", type=float)
-parser.add_argument(
-    "--n_iter", help="number of iterations for randomized optimal param search", type=int, default=50)
-parser.add_argument(
-    "--model_output", help="filename of the output model", default="SVC")
-parser.add_argument(
-    "--test_output", help="filename of the test results", default="test_results")
+    if ".joblib" not in args.model_output:
+        args.model_output = args.model_output + ".joblib"
 
-args = parser.parse_args()
+    if ".csv" not in args.test_output:
+        args.test_output = args.test_output + ".csv"
 
-if ".joblib" not in args.model_output:
-    args.model_output = args.model_output + ".joblib"
-
-if ".csv" not in args.test_output:
-    args.test_output = args.test_output + ".csv"
-
-df, df_bkp = fetch_data(args.database)
-# Feature scaling did not improve performance, so it was not included.
-x_train, x_test, y_train, y_test = tt_split(df)
-model = train_model(args.C, args.gamma, x_train, y_train, args.n_iter)
-persist_model_to_disk(model, args.model_output)
-pred, proba = predict(model, x_test)
-display_stats(pred, y_test)
-persist_test_results_to_disk(
-    x_test, y_test, pred, proba, df_bkp, args.test_output)
+    df, df_bkp = fetch_data(args.database)
+    # Feature scaling did not improve performance, so it was not included.
+    x_train, x_test, y_train, y_test = tt_split(df)
+    model = train_model(args.C, args.gamma, x_train, y_train, args.n_iter)
+    persist_model_to_disk(model, args.model_output)
+    pred, proba = predict(model, x_test)
+    display_stats(pred, y_test)
+    persist_test_results_to_disk(
+        x_test, y_test, pred, proba, df_bkp, args.test_output)

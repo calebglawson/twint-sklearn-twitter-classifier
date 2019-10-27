@@ -49,35 +49,36 @@ def fetch_following(username, limit):
 
 
 # MAIN
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "username", help="twitter user from whom to fetch the followers")
+    parser.add_argument("--filter", help="csv file of individuals to filter")
+    parser.add_argument(
+        "--output", help="specify output filename", default="followers.csv")
+    parser.add_argument("--limit", help="max followers to fetch", type=int)
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "username", help="twitter user from whom to fetch the followers")
-parser.add_argument("--filter", help="csv file of individuals to filter")
-parser.add_argument(
-    "--output", help="specify output filename", default="followers.csv")
-parser.add_argument("--limit", help="max followers to fetch", type=int)
+    args = parser.parse_args()
 
-args = parser.parse_args()
+    if args.output != None:
+        if ".csv" not in args.output:
+            args.output = args.output + ".csv"
 
-if args.output != None:
-    if ".csv" not in args.output:
-        args.output = args.output + ".csv"
+    follower_list = fetch_following(args.username, args.limit)
 
-follower_list = fetch_following(args.username, args.limit)
+    if args.filter != None:
+        watchlist = import_watchlist(args.filter, "screen_names")
+    else:
+        watchlist = pd.DataFrame()
+        watchlist['screen_names'] = pd.Series()
 
-if args.filter != None:
-    watchlist = import_watchlist(args.filter, "screen_names")
-else:
-    watchlist = pd.DataFrame()
-    watchlist['screen_names'] = pd.Series()
+    filtered_followers = []
+    for follower in follower_list[0]:
+        if follower not in watchlist['screen_names'].values:
+            filtered_followers.append(follower.lower())
 
-filtered_followers = []
-for follower in follower_list[0]:
-    if follower not in watchlist['screen_names'].values:
-        filtered_followers.append(follower.lower())
+    filtered_followers = pd.DataFrame(
+        filtered_followers, columns=['screen_names'])
+    filtered_followers.to_csv(args.output, quoting=csv.QUOTE_NONNUMERIC)
 
-filtered_followers = pd.DataFrame(filtered_followers, columns=['screen_names'])
-filtered_followers.to_csv(args.output, quoting=csv.QUOTE_NONNUMERIC)
-
-print('Output: ' + args.output)
+    print('Output: ' + args.output)
