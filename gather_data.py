@@ -289,32 +289,41 @@ def calculate_bio_stats(bio, watchwords):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input", help="twitter users from whom to fetch the stats about their relationship to the watchlist users")
-    parser.add_argument(
         "watchlist", help="group of twitter users who are interesting")
     parser.add_argument(
         "output", help="specify output database")
     parser.add_argument(
         "--bio_watchwords", help="list of watchwords to look for in tweets unique to the target group")
     parser.add_argument(
-        "--fetch_limit", help="number of tweets to fetch when calculating statistics", default=100, type=int)
+        "--tweet_fetch_limit", help="number of tweets to fetch when calculating statistics", default=100, type=int)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        '--username', help="username of single user to fetch data on")
+    group.add_argument(
+        '--userlist',  help="csv containing usernames to fetch data on")
 
     args = parser.parse_args()
 
     if ".db" not in args.output:
         args.output = args.output + ".db"
 
+    if args.username != None:
+        users = [args.username]
+
+    if args.userlist != None:
+        users = import_csv(args.userlist, "screen_names")
+        users = users["screen_names"].values
+
     db = create_connection(args.output)
     twint_db = args.output.replace(".db", "_twint_data.db")
     watchlist = import_csv(args.watchlist, "screen_names")
-    intake = import_csv(args.input, "screen_names")
 
     bio_watchwords = import_csv(args.bio_watchwords, "watchwords")
 
     if exists_table(db) != True:
         create(db)
 
-    for user in intake["screen_names"]:
+    for user in users:
 
         user = user.lower()
         print(user)
@@ -327,9 +336,9 @@ if __name__ == '__main__':
             following_watchlist, watchlist_completion = following(
                 user, following_count, watchlist, twint_db)
             likes_watchlist = likes(
-                user, args.fetch_limit, watchlist, twint_db)
+                user, args.tweet_fetch_limit, watchlist, twint_db)
             retweets_watchlist, mentions_watchlist = tweets(
-                user, args.fetch_limit, watchlist, twint_db)
+                user, args.tweet_fetch_limit, watchlist, twint_db)
             watchword_in_bio = calculate_bio_stats(bio, bio_watchwords)
 
             if user in watchlist['screen_names'].values:

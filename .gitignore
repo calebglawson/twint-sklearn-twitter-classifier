@@ -1,3 +1,5 @@
-specifics/*
 .vscode/*
 .ipynb_checkpoints/*
+*.csv
+*.joblib
+*.db

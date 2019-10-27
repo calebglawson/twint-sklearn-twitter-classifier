@@ -4,8 +4,8 @@ import pandas as pd
 import sqlite3
 
 
-def load_model(model_filename):
-    model = load(model_filename)
+def load_model(model):
+    model = load(model)
     return model
 
 
@@ -29,16 +29,16 @@ def get_predictions(df, model):
     return pred, proba
 
 
-def output_results(df_bkp, pred, proba, output_filename):
+def output_results(df_bkp, pred, proba, output):
     results = pd.DataFrame(df_bkp)
     results["pred"] = pred
     results["proba"] = proba
     results = results.sort_values(
         by=['proba'], ascending=False)
 
-    results.to_csv(output_filename)
+    results.to_csv(output)
 
-    print("Predictions saved to: " + output_filename)
+    print("Predictions saved to: " + output)
 
 # MAIN
 
@@ -48,16 +48,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "database", help="name of the db holding the twitter user stats")
 parser.add_argument(
-    "model_filename", help="filename of the joblibbed model")
+    "model", help="filename of the joblibbed model")
 parser.add_argument(
-    "--output_filename", help="filename of the predicted output", default="results.csv")
+    "--output", help="filename of the predicted output", default="results.csv")
 
 args = parser.parse_args()
 
-if ".csv" not in args.output_filename:
-    args.output_filename = args.output_filename + ".csv"
+if ".csv" not in args.output:
+    args.output = args.output + ".csv"
 
 df, df_bkp = fetch_data(args.database)
-model = load_model(args.model_filename)
+model = load_model(args.model)
 pred, proba = get_predictions(df, model)
-output_results(df_bkp, pred, proba, args.output_filename)
+output_results(df_bkp, pred, proba, args.output)
