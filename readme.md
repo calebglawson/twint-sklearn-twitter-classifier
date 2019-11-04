@@ -12,7 +12,7 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 5. Run generate_model.py on the fetched data to generate a model. **Example:** ```python .\generate_model.py .\results.db --model_output model.joblib --test_output test_results.csv```
 ## Once You Have a Machine Learning Model
 1. Run gather_data.py to fetch stats on a new set of users that you would like to use with the model. **Example:** ```python .\gather_data.py .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv --tweet_watchwords ./tweet_watchwords.csv --userlist .\users.csv```
-2. Run predict.py on the new set of users and view the results. **Example: ** ```python .\predict.py .\results.db .\model.joblib --output results_predictions.csv```
+2. Run predict.py on the new set of users and view the results. **Example:** ```python .\predict.py .\results.db .\model.joblib --output results_predictions.csv```
 3. Use the file generated from predict.py to find users of interest. Take a deeper look into an individual user by reviewing their report generated be gather_data.py.
 
 # Required Libraries
