@@ -11,14 +11,15 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 4. Run gather_data.py to fetch the stats, supply all of the script params in the command line. **Example:** ```python .\gather_data.py .\users.csv .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv```
 5. Run generate_model.py on the fetched data to generate a model. **Example:** ```python .\generate_model.py .\results.db --model_output model.joblib --test_output test_results.csv```
 ## Once You Have a Machine Learning Model
-1. Run gather_data.py to fetch stats on a new set of users that you would like to use with the model. **Example:** ```python .\gather_data.py .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv --userlist .\users.csv```
+1. Run gather_data.py to fetch stats on a new set of users that you would like to use with the model. **Example:** ```python .\gather_data.py .\watchlist.csv results.db --bio_watchwords .\bio_watchwords.csv --tweet_watchwords ./tweet_watchwords.csv --userlist .\users.csv```
 2. Run predict.py on the new set of users and view the results. **Example: ** ```python .\predict.py .\results.db .\model.joblib --output results_predictions.csv```
-4. Run view_data.py for a subset of those users to view the evidence that lead to the conclusion. **Example:** ```python .\view_data.py .\results_twint_data.db .\watchlist.csv --tweet_watchwords .\tweet_watchwords.csv --username example_user```
+3. Use the file generated from predict.py to find users of interest. Take a deeper look into an individual user by reviewing their report generated be gather_data.py.
 
 # Required Libraries
 * argparse
 * joblib
 * numpy
+* openpyxl or xlsxwriter
 * pandas
 * scipy
 * sklearn
@@ -40,19 +41,14 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 * fetch_followers.py
     * Fetch the followers of a given user ID. Optionally filter and limit results. Outputs CSV.
 * gather_data.py
-    * From a list of twitter users, gather the twitter data, persist it, and compute stats. Outputs SQLite Databases.
+    * From a list of twitter users, gather the twitter data, persist it, and compute stats. Outputs a single SQLite Database the machine learning model and Excel reports for humans.
 * generate_model.py
     * From a DB outputted by gather_data.py, generate a machine learning model which will classify twitter users in one of two classes. Outputs .joblib of the model and test results.
 * predict.py
     * From a DB outputted by gather_data.py, load a machine learning model outputted by generate_model.py and classify the twitter users. Outputs CSV of the results.
-* view_data.py
-    * From a list of users or a single user, fetch the data used to compute stats from the DB and organize it in a human-readable way. Outputs CSV files.
-
-## Databases
+## Database
 * *.db
     * The computed stats outputted by gather_data.py
-* *_twint_data.db
-    * The twint twitter data outputted by gather_data.py
 
 ## CSVs
 * watchlist.csv
