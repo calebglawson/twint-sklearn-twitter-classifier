@@ -77,6 +77,13 @@ def display_stats(pred, y_test):
     print(classification_report(y_test, pred))
 
 
+def write_excel(path, df, worksheet, mode):
+    if len(df.index) > 0:
+        writer = pd.ExcelWriter(path, mode=mode)
+        df.to_excel(writer, worksheet)
+        writer.save()
+
+
 def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_output):
     results = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1)
     results = results.reset_index()
@@ -84,7 +91,7 @@ def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_outpu
     results["pred"] = pred
     results["proba"] = proba
 
-    results.to_csv(test_output)
+    write_excel(test_output, results, "test results", "w")
 
     print("Test results saved to: " + test_output)
 
@@ -101,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--n_iter", help="number of iterations for randomized optimal param search", type=int, default=50)
     parser.add_argument(
-        "--model_output", help="filename of the output model", default="SVC")
+        "--model_output", help="filename of the output model", default="model")
     parser.add_argument(
         "--test_output", help="filename of the test results", default="test_results")
 
@@ -110,8 +117,8 @@ if __name__ == '__main__':
     if ".joblib" not in args.model_output:
         args.model_output = args.model_output + ".joblib"
 
-    if ".csv" not in args.test_output:
-        args.test_output = args.test_output + ".csv"
+    if ".xlsx" not in args.test_output:
+        args.test_output = args.test_output + ".xlsx"
 
     df, df_bkp = fetch_data(args.database)
     # Feature scaling did not improve performance, so it was not included.

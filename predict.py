@@ -29,6 +29,13 @@ def get_predictions(df, model):
     return pred, proba
 
 
+def write_excel(path, df, worksheet, mode):
+    if len(df.index) > 0:
+        writer = pd.ExcelWriter(path, mode=mode)
+        df.to_excel(writer, worksheet)
+        writer.save()
+
+
 def output_results(df_bkp, pred, proba, output):
     results = pd.DataFrame(df_bkp)
     results["pred"] = pred
@@ -36,7 +43,7 @@ def output_results(df_bkp, pred, proba, output):
     results = results.sort_values(
         by=['proba'], ascending=False)
 
-    results.to_csv(output)
+    write_excel(output, results, "predictions", "w")
 
     print("Predictions saved to: " + output)
 
@@ -50,12 +57,12 @@ parser.add_argument(
 parser.add_argument(
     "model", help="filename of the joblibbed model")
 parser.add_argument(
-    "--output", help="filename of the predicted output", default="results.csv")
+    "--output", help="filename of the predicted output", default="predictions")
 
 args = parser.parse_args()
 
-if ".csv" not in args.output:
-    args.output = args.output + ".csv"
+if ".xlsx" not in args.output:
+    args.output = args.output + ".xlsx"
 
 df, df_bkp = fetch_data(args.database)
 model = load_model(args.model)
