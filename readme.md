@@ -45,7 +45,7 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 * generate_model.py
     * From a DB outputted by gather_data.py, generate a machine learning model which will classify twitter users in one of two classes. Outputs .joblib of the model and test results.
 * predict.py
-    * From a DB outputted by gather_data.py, load a machine learning model outputted by generate_model.py and classify the twitter users. Outputs CSV of the results.
+    * From a DB outputted by gather_data.py, load a machine learning model outputted by generate_model.py and classify the twitter users. Outputs Excel file of the results.
 ## Database
 * *.db
     * The computed stats outputted by gather_data.py
