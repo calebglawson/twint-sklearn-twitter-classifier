@@ -1,4 +1,4 @@
-**Twint, the library used to fetch tweets, is incompatible with Python 3.8 at this time.  Please use Python 3.7 or 3.6 with these scripts until this message is removed.** twintproject/twint#569
+**Twint, the library used to fetch tweets, is incompatible with Python 3.8 at this time.  Please use Python 3.7 or 3.6 with these scripts until this message is removed.** [twintproject/twint#569](https://github.com/twintproject/twint/issues/569)
 
 # Summary
 This project takes in a list of twitter accounts, collects stats, trains a classification model, predicts class based on stats, and returns the data collected to create the stats.
