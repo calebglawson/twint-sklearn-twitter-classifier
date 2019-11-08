@@ -129,7 +129,10 @@ def import_csv(filename, header):
                 data = []
                 print(e)
     else:
-        data = []
+        if header == "watchwords":
+            data = []
+        else:
+            data = pd.DataFrame()
 
     return data
 
@@ -547,8 +550,23 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    watchlist = import_csv(args.watchlist, "screen_names")
+
     if ".db" not in args.output:
         args.output = args.output + ".db"
+
+    # Create an output directory, since several XLSX files will be produced.
+    directory = "./" + args.output.replace(".db","") + "/"
+    if not path.exists(directory):
+        mkdir(directory)
+
+    db = create_connection(directory + args.output)
+    if exists_table(db) != True:
+        create(db)
+    db.close()
+
+    bio_watchwords = import_csv(args.bio_watchwords, "watchwords")
+    tweet_watchwords = import_csv(args.tweet_watchwords, "watchwords")
 
     if args.username != None:
         users = [args.username]
@@ -556,22 +574,6 @@ if __name__ == '__main__':
     if args.userlist != None:
         users = import_csv(args.userlist, "screen_names")
         users = users["screen_names"].values
-
-    directory = "./" + args.output.replace(".db","") + "/"
-    if not path.exists(directory):
-        mkdir(directory)
-
-    db = create_connection(directory + args.output)
-    watchlist = import_csv(args.watchlist, "screen_names")
-
-    bio_watchwords = import_csv(args.bio_watchwords, "watchwords")
-    tweet_watchwords = import_csv(args.tweet_watchwords, "watchwords")
-
-
-
-    if exists_table(db) != True:
-        create(db)
-    db.close()
 
     # Build work queue.
     work = []
