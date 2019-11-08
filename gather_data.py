@@ -96,7 +96,7 @@ def twint_obj_list_to_df(twint_list):
 
 def write_excel(path, df, columns, worksheet, mode):
     if len(df.index) > 0:
-        writer = pd.ExcelWriter(path, mode=mode)
+        writer = pd.ExcelWriter(path, mode=mode) # https://github.com/PyCQA/pylint/issues/3060 pylint: disable=abstract-class-instantiated
         df.to_excel(writer, worksheet, columns=columns)
         writer.save()
 
@@ -115,18 +115,21 @@ def detect_file_header(filename, header):
 
 def import_csv(filename, header):
 
-    detect_file_header(filename, header)
+    if filename != None:
+        detect_file_header(filename, header)
 
-    data = pd.read_csv(filename)
-    data[header] = data[header].apply(
-        lambda x: x.lower())
+        data = pd.read_csv(filename)
+        data[header] = data[header].apply(
+            lambda x: x.lower())
 
-    if header == "watchwords":
-        try:
-            data = data[header].values
-        except Exception as e:
-            data = []
-            print(e)
+        if header == "watchwords":
+            try:
+                data = data[header].values
+            except Exception as e:
+                data = []
+                print(e)
+    else:
+        data = []
 
     return data
 
