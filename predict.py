@@ -46,7 +46,10 @@ def output_results(df_bkp, pred, proba, output):
 
     write_excel(output, results, "predictions", "w")
 
-    print("Predictions saved to: " + output)
+    if len(results.index) > 0:
+        print("Predictions saved to: " + output)
+    else:
+        print("No results to output.")
 
 # MAIN
 

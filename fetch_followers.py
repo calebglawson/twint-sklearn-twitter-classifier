@@ -16,14 +16,28 @@ def detect_file_header(filename, header):
         f.close()
 
 
-def import_watchlist(filename, header):
+def import_csv(filename, header):
 
-    detect_file_header(filename, header)
+    if filename != None:
+        detect_file_header(filename, header)
 
-    watchlist = pd.read_csv(filename)
-    watchlist[header] = watchlist[header].apply(
-        lambda x: x.lower())
-    return watchlist
+        data = pd.read_csv(filename)
+        data[header] = data[header].apply(
+            lambda x: x.lower())
+
+        if header == "watchwords":
+            try:
+                data = data[header].values
+            except Exception as e:
+                data = []
+                print(e)
+    else:
+        if header == "watchwords":
+            data = []
+        else:
+            data = pd.DataFrame()
+
+    return data
 
 
 def fetch_following(username, limit):
@@ -64,21 +78,31 @@ if __name__ == '__main__':
         if ".csv" not in args.output:
             args.output = args.output + ".csv"
 
-    follower_list = fetch_following(args.username, args.limit)
+    max_attempts = 5
+    attempt = 0
+    follower_list = pd.DataFrame()
 
-    if args.filter != None:
-        watchlist = import_watchlist(args.filter, "screen_names")
-    else:
-        watchlist = pd.DataFrame()
-        watchlist['screen_names'] = pd.Series()
+    while len(follower_list.index) == 0 and attempt < max_attempts:
+        try:
+            follower_list = fetch_following(args.username, args.limit)
+        except:
+            print(f"Attempt {str(attempt)} of {str(max_attempts)} failed.")
 
-    filtered_followers = []
-    for follower in follower_list[0]:
-        if follower not in watchlist['screen_names'].values:
-            filtered_followers.append(follower.lower())
+        attempt += 1
 
-    filtered_followers = pd.DataFrame(
-        filtered_followers, columns=['screen_names'])
-    filtered_followers.to_csv(args.output, quoting=csv.QUOTE_NONNUMERIC)
+    if len(follower_list.index) > 0:
+        watchlist = import_csv(args.filter, "screen_names")
 
-    print('Output: ' + args.output)
+        if len(watchlist.index) > 0:
+            filtered_followers = []
+            for follower in follower_list[0]:
+                if follower not in watchlist['screen_names'].values:
+                    filtered_followers.append(follower.lower())
+            follower_list = pd.DataFrame(
+                filtered_followers, columns=['screen_names'])
+
+        if len(follower_list.index) > 0:
+            follower_list.to_csv(args.output, quoting=csv.QUOTE_NONNUMERIC)
+            print('Output: ' + args.output)
+        else:
+            print("No followers to output.")

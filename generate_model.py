@@ -94,7 +94,10 @@ def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_outpu
 
     write_excel(test_output, results, "test results", "w")
 
-    print("Test results saved to: " + test_output)
+    if len(results.index) > 0:
+        print("Test results saved to: " + test_output)
+    else:
+        print("No results to output.")
 
 
 # MAIN
