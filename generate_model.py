@@ -79,6 +79,7 @@ def display_stats(pred, y_test):
 
 def write_excel(path, df, worksheet, mode):
     if len(df.index) > 0:
+        # https://github.com/PyCQA/pylint/issues/3060 pylint: disable=abstract-class-instantiated
         writer = pd.ExcelWriter(path, mode=mode)
         df.to_excel(writer, worksheet)
         writer.save()
