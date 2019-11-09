@@ -4,10 +4,9 @@ import sqlite3
 import twint
 from multiprocessing import Pool, cpu_count
 from time import sleep
-from os import getpid,mkdir,path
+from os import getpid, mkdir, path
 from datetime import datetime
 import traceback
-
 
 def create_connection(db_file):
     try:
@@ -17,7 +16,6 @@ def create_connection(db_file):
         print(e)
         return None
 
-
 def create(conn):
     try:
         sql = '''CREATE TABLE user_stats ( 	id	TEXT, 	username	TEXT, 	last_updated	INTEGER, 	following_watchlist	REAL, 	watchlist_completion	REAL, 	likes_watchlist	REAL, 	retweets_watchlist	REAL, 	mentions_watchlist	REAL, watchword_in_bio INGEGER, 	is_on_watchlist	INTEGER, 	PRIMARY KEY(id) )'''
@@ -26,7 +24,6 @@ def create(conn):
     except Exception as e:
         print("Failed to create")
         print(e)
-
 
 def insert(conn, user_stats):
     try:

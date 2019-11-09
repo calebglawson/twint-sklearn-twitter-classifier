@@ -1,6 +1,5 @@
 .vscode/*
 .ipynb_checkpoints/*
-.intake/*
 *.xlsx
 *.csv
 *.joblib
