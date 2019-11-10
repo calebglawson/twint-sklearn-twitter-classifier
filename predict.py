@@ -60,7 +60,7 @@ def output_results(df_bkp, pred, proba, output):
     write_excel(output, results, "predictions", "w")
 
     if not results.empty:
-        print("Predictions saved to: " + output)
+        print(f"Predictions saved to: {output}")
     else:
         print("No results to output.")
 
@@ -79,7 +79,7 @@ PARSER.add_argument(
 ARGS = PARSER.parse_args()
 
 if ".xlsx" not in ARGS.output:
-    ARGS.output = ARGS.output + ".xlsx"
+    ARGS.output = f"{ARGS.output}.xlsx"
 
 DF, DF_BKP = fetch_data(ARGS.database)
 MODEL = load_model(ARGS.model)
