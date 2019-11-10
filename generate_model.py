@@ -33,13 +33,13 @@ def fetch_data(database):
 def tt_split(dataframe):
     '''Split DB data into train and test data sets.'''
 
-    x_tr, x_tst, y_tr, y_tst = train_test_split(dataframe.drop('is_on_watchlist', axis=1),
-                                                dataframe['is_on_watchlist'],
-                                                test_size=0.25)
-    return x_tr, x_tst, y_tr, y_tst
+    x_train, x_test, y_train, y_test = train_test_split(dataframe.drop('is_on_watchlist', axis=1),
+                                                        dataframe['is_on_watchlist'],
+                                                        test_size=0.25)
+    return x_train, x_test, y_train, y_test
 
 
-def find_best_params(x_tr, y_tr, n_iter):
+def find_best_params(x_train, y_train, n_iter):
     '''Do a randomized search in order to find the best params that fit the model.'''
 
     print("Finding the best param values, this may take some time.")
@@ -47,51 +47,51 @@ def find_best_params(x_tr, y_tr, n_iter):
     params = {"C": stats.uniform(1, 1000000),
               "gamma": stats.uniform(0.1, 1)}
 
-    mdl = RandomizedSearchCV(SVC(
+    model = RandomizedSearchCV(SVC(
         probability=True), param_distributions=params, n_iter=n_iter, n_jobs=-1, cv=5, verbose=3)
-    mdl.fit(x_tr, y_tr)
+    model.fit(x_train, y_train)
 
-    print("Best Params: " + str(mdl.best_params_))
+    print(f"Best Params: {model.best_params_}")
 
-    return mdl
+    return model
 
 
-def train_model(c_val, gamma, x_tr, y_tr, n_iter):
+def train_model(c_val, gamma, x_train, y_train, n_iter):
     '''Train the model with the user-provided params.'''
 
     if c_val is None or gamma is None:
-        mdl = find_best_params(x_tr, y_tr, n_iter)
+        model = find_best_params(x_train, y_train, n_iter)
     else:
-        mdl = SVC(probability=True, C=c_val,
-                  gamma=gamma)
-        mdl.fit(x_tr, y_tr)
+        model = SVC(probability=True, C=c_val,
+                    gamma=gamma)
+        model.fit(x_train, y_train)
 
-    return mdl
+    return model
 
 
-def persist_model_to_disk(mdl, model_output):
+def persist_model_to_disk(model, model_output):
     '''Dump the model to a file on the disk to be consumed by predict.py.'''
 
-    dump(mdl, model_output)
+    dump(model, model_output)
     print(f"Model preserved to disk: {model_output}")
 
 
-def predict(mdl, x_tst):
+def predict(model, x_test):
     '''Run predictions against the test data.'''
 
-    prd = mdl.predict(x_tst)
-    prob = mdl.predict_proba(x_tst)[:, 1]
+    pred = model.predict(x_test)
+    proba = model.predict_proba(x_test)[:, 1]
 
-    return prd, prob
+    return pred, proba
 
 
-def display_stats(prd, y_tst):
+def display_stats(pred, y_test):
     '''Print out the model performance stats to the user.'''
 
     print("Confusion Matrix")
-    print(confusion_matrix(y_tst, prd))
+    print(confusion_matrix(y_test, pred))
     print("Classification Report")
-    print(classification_report(y_tst, prd))
+    print(classification_report(y_test, pred))
 
 
 def write_excel(path, dataframe, worksheet, mode):
@@ -104,19 +104,19 @@ def write_excel(path, dataframe, worksheet, mode):
         writer.save()
 
 
-def persist_test_results_to_disk(x_tst, y_tst, prd, prob, bkp, test_output):
+def persist_test_results_to_disk(x_test, y_test, pred, proba, bkp, test_output):
     '''Persist the test results to disk.'''
 
-    results = pd.concat([pd.DataFrame(x_tst), pd.DataFrame(y_tst)], axis=1)
+    results = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1)
     results = results.reset_index()
     results = bkp.loc[results['index']]
-    results["pred"] = prd
-    results["proba"] = prob
+    results["pred"] = pred
+    results["proba"] = proba
 
     write_excel(test_output, results, "test results", "w")
 
     if not results.empty:
-        print("Test results saved to: " + test_output)
+        print(f"Test results saved to: {test_output}")
     else:
         print("No results to output.")
 
@@ -141,10 +141,10 @@ if __name__ == '__main__':
     ARGS = PARSER.parse_args()
 
     if ".joblib" not in ARGS.model_output:
-        ARGS.model_output = ARGS.model_output + ".joblib"
+        ARGS.model_output = f"{ARGS.model_output}.joblib"
 
     if ".xlsx" not in ARGS.test_output:
-        ARGS.test_output = ARGS.test_output + ".xlsx"
+        ARGS.test_output = f"{ARGS.test_output}.xlsx"
 
     DF, DF_BKP = fetch_data(ARGS.database)
     # Feature scaling did not improve performance, so it was not included.
