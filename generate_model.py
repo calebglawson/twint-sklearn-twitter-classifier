@@ -1,100 +1,121 @@
+'''This script takes the DB built with gather_data.py and turns it into a machine learning model.'''
+
+import argparse
+import sqlite3
 from joblib import dump
 from scipy import stats
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-import argparse
-import numpy as np
 import pandas as pd
-import sqlite3
 
 
 def fetch_data(database):
+    '''Retrieve and filter data for numeric columns.'''
+
     conn = sqlite3.connect(database)
-    df = pd.read_sql_query("select * from user_stats;", conn)
+    dataframe = pd.read_sql_query("select * from user_stats;", conn)
 
     # Preserve the DF for displaying results later.
-    df_bkp = df
+    bkp = dataframe
 
     # Remove the non-numeric types from the DF.
-    df = df[['following_watchlist', 'watchlist_completion', 'likes_watchlist', 'retweets_watchlist', 'mentions_watchlist', 'watchword_in_bio',
-             'is_on_watchlist']]
+    dataframe = dataframe[['following_watchlist', 'watchlist_completion', 'likes_watchlist',
+                           'retweets_watchlist', 'mentions_watchlist', 'watchword_in_bio',
+                           'is_on_watchlist']]
 
     conn.close()
 
-    return df, df_bkp
+    return dataframe, bkp
 
 
-def tt_split(df):
-    x_train, x_test, y_train, y_test = train_test_split(df.drop('is_on_watchlist', axis=1), df['is_on_watchlist'],
-                                                        test_size=0.25)
-    return x_train, x_test, y_train, y_test
+def tt_split(dataframe):
+    '''Split DB data into train and test data sets.'''
+
+    x_tr, x_tst, y_tr, y_tst = train_test_split(dataframe.drop('is_on_watchlist', axis=1),
+                                                dataframe['is_on_watchlist'],
+                                                test_size=0.25)
+    return x_tr, x_tst, y_tr, y_tst
 
 
-def find_best_params(x_train, y_train, n_iter):
+def find_best_params(x_tr, y_tr, n_iter):
+    '''Do a randomized search in order to find the best params that fit the model.'''
+
     print("Finding the best param values, this may take some time.")
 
     params = {"C": stats.uniform(1, 1000000),
               "gamma": stats.uniform(0.1, 1)}
 
-    model = RandomizedSearchCV(SVC(
+    mdl = RandomizedSearchCV(SVC(
         probability=True), param_distributions=params, n_iter=n_iter, n_jobs=-1, cv=5, verbose=3)
-    model.fit(x_train, y_train)
+    mdl.fit(x_tr, y_tr)
 
-    print("Best Params: " + str(model.best_params_))
+    print("Best Params: " + str(mdl.best_params_))
 
-    return model
+    return mdl
 
 
-def train_model(C, gamma, x_train, y_train, n_iter):
-    if C == None or gamma == None:
-        model = find_best_params(x_train, y_train, n_iter)
+def train_model(c_val, gamma, x_tr, y_tr, n_iter):
+    '''Train the model with the user-provided params.'''
+
+    if c_val is None or gamma is None:
+        mdl = find_best_params(x_tr, y_tr, n_iter)
     else:
-        model = SVC(probability=True, C=C,
-                    gamma=gamma)
-        model.fit(x_train, y_train)
+        mdl = SVC(probability=True, C=c_val,
+                  gamma=gamma)
+        mdl.fit(x_tr, y_tr)
 
-    return model
-
-
-def persist_model_to_disk(model, model_output):
-    dump(model, model_output)
-    print("Model preserved to disk: " + model_output)
+    return mdl
 
 
-def predict(model, x_test):
-    pred = model.predict(x_test)
-    proba = model.predict_proba(x_test)[:, 1]
+def persist_model_to_disk(mdl, model_output):
+    '''Dump the model to a file on the disk to be consumed by predict.py.'''
 
-    return pred, proba
+    dump(mdl, model_output)
+    print(f"Model preserved to disk: {model_output}")
 
 
-def display_stats(pred, y_test):
+def predict(mdl, x_tst):
+    '''Run predictions against the test data.'''
+
+    prd = mdl.predict(x_tst)
+    prob = mdl.predict_proba(x_tst)[:, 1]
+
+    return prd, prob
+
+
+def display_stats(prd, y_tst):
+    '''Print out the model performance stats to the user.'''
+
     print("Confusion Matrix")
-    print(confusion_matrix(y_test, pred))
+    print(confusion_matrix(y_tst, prd))
     print("Classification Report")
-    print(classification_report(y_test, pred))
+    print(classification_report(y_tst, prd))
 
 
-def write_excel(path, df, worksheet, mode):
-    if len(df.index) > 0:
+def write_excel(path, dataframe, worksheet, mode):
+    '''Write data frame to Excel file.'''
+
+    if not dataframe.empty:
         # https://github.com/PyCQA/pylint/issues/3060 pylint: disable=abstract-class-instantiated
         writer = pd.ExcelWriter(path, mode=mode)
-        df.to_excel(writer, worksheet)
+        dataframe.to_excel(writer, worksheet)
         writer.save()
 
 
-def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_output):
-    results = pd.concat([pd.DataFrame(x_test), pd.DataFrame(y_test)], axis=1)
+def persist_test_results_to_disk(x_tst, y_tst, prd, prob, bkp, test_output):
+    '''Persist the test results to disk.'''
+
+    results = pd.concat([pd.DataFrame(x_tst), pd.DataFrame(y_tst)], axis=1)
     results = results.reset_index()
-    results = df_bkp.loc[results['index']]
-    results["pred"] = pred
-    results["proba"] = proba
+    results = bkp.loc[results['index']]
+    results["pred"] = prd
+    results["proba"] = prob
 
     write_excel(test_output, results, "test results", "w")
 
-    if len(results.index) > 0:
+    if not results.empty:
         print("Test results saved to: " + test_output)
     else:
         print("No results to output.")
@@ -102,34 +123,35 @@ def persist_test_results_to_disk(x_test, y_test, pred, proba, df_bkp, test_outpu
 
 # MAIN
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument(
         "database", help="name of the db holding the twitter user stats and labels")
-    parser.add_argument(
+    PARSER.add_argument(
         "--C", help="C value param for SVC", type=float)
-    parser.add_argument(
+    PARSER.add_argument(
         "--gamma", help="gamma value param for SVC", type=float)
-    parser.add_argument(
-        "--n_iter", help="number of iterations for randomized optimal param search", type=int, default=50)
-    parser.add_argument(
+    PARSER.add_argument(
+        "--n_iter", help="number of iterations for randomized optimal param search",
+        type=int, default=50)
+    PARSER.add_argument(
         "--model_output", help="filename of the output model", default="model")
-    parser.add_argument(
+    PARSER.add_argument(
         "--test_output", help="filename of the test results", default="test_results")
 
-    args = parser.parse_args()
+    ARGS = PARSER.parse_args()
 
-    if ".joblib" not in args.model_output:
-        args.model_output = args.model_output + ".joblib"
+    if ".joblib" not in ARGS.model_output:
+        ARGS.model_output = ARGS.model_output + ".joblib"
 
-    if ".xlsx" not in args.test_output:
-        args.test_output = args.test_output + ".xlsx"
+    if ".xlsx" not in ARGS.test_output:
+        ARGS.test_output = ARGS.test_output + ".xlsx"
 
-    df, df_bkp = fetch_data(args.database)
+    DF, DF_BKP = fetch_data(ARGS.database)
     # Feature scaling did not improve performance, so it was not included.
-    x_train, x_test, y_train, y_test = tt_split(df)
-    model = train_model(args.C, args.gamma, x_train, y_train, args.n_iter)
-    persist_model_to_disk(model, args.model_output)
-    pred, proba = predict(model, x_test)
-    display_stats(pred, y_test)
+    X_TRAIN, X_TEST, Y_TRAIN, Y_TEST = tt_split(DF)
+    MODEL = train_model(ARGS.C, ARGS.gamma, X_TRAIN, Y_TRAIN, ARGS.n_iter)
+    persist_model_to_disk(MODEL, ARGS.model_output)
+    PRED, PROBA = predict(MODEL, X_TEST)
+    display_stats(PRED, Y_TEST)
     persist_test_results_to_disk(
-        x_test, y_test, pred, proba, df_bkp, args.test_output)
+        X_TEST, Y_TEST, PRED, PROBA, DF_BKP, ARGS.test_output)
