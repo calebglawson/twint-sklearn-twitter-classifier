@@ -32,11 +32,7 @@ def import_csv(filename, header):
             lambda x: x.lower())
 
         if header == "watchwords":
-            try:
-                data = data[header].values
-            except Exception as exception:
-                data = []
-                print(exception)
+            data = data[header].values
     else:
         if header == "watchwords":
             data = []
@@ -80,7 +76,7 @@ if __name__ == '__main__':
 
     if ARGS.output is not None:
         if ".csv" not in ARGS.output:
-            ARGS.output = ARGS.output + ".csv"
+            ARGS.output = f"{ARGS.output}.csv"
 
     MAX_ATTEMPTS = 5
     ATTEMPT = 0
@@ -108,6 +104,6 @@ if __name__ == '__main__':
 
         if not FOLLOWER_LIST.empty:
             FOLLOWER_LIST.to_csv(ARGS.output, quoting=QUOTE_NONNUMERIC)
-            print('Output: ' + ARGS.output)
+            print(f"Output: {ARGS.output}")
         else:
             print("No followers to output.")
