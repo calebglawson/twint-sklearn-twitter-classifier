@@ -16,56 +16,40 @@ import pandas as pd
 def create_connection(db_file):
     '''Create a connection to the stats output DB.'''
 
-    try:
-        conn = sqlite3.connect(db_file, isolation_level=None)
-        return conn
-    except Exception as exception:
-        print(exception)
-        return None
+    conn = sqlite3.connect(db_file, isolation_level=None)
+    return conn
 
 
 def create(conn):
     '''Create the stats table.'''
 
-    try:
-        sql = '''CREATE TABLE user_stats ( id TEXT,	username TEXT, last_updated INTEGER,
-        following_watchlist REAL, watchlist_completion REAL, likes_watchlist REAL,
-        retweets_watchlist REAL, mentions_watchlist REAL, watchword_in_bio INGEGER,
-        is_on_watchlist INTEGER, PRIMARY KEY(id) )'''
-        cur = conn.cursor()
-        cur.execute(sql)
-    except Exception as exception:
-        print("Failed to create DB Schema.")
-        print(exception)
+    sql = '''CREATE TABLE user_stats ( id TEXT,	username TEXT, last_updated INTEGER,
+    following_watchlist REAL, watchlist_completion REAL, likes_watchlist REAL,
+    retweets_watchlist REAL, mentions_watchlist REAL, watchword_in_bio INGEGER,
+    is_on_watchlist INTEGER, PRIMARY KEY(id) )'''
+    cur = conn.cursor()
+    cur.execute(sql)
 
 
 def insert(conn, user_stats):
     '''Insert a row into the stats table.'''
 
-    try:
-        sql = '''INSERT INTO user_stats (id, username, last_updated, following_watchlist,
-        watchlist_completion, likes_watchlist, retweets_watchlist, mentions_watchlist,
-        watchword_in_bio, is_on_watchlist) VALUES (?,?,current_timestamp,?,?,?,?,?,?,?)'''
-        cur = conn.cursor()
-        cur.execute(sql, user_stats)
-    except Exception as exception:
-        print(f"Failed to insert {user_stats[1]}.")
-        print(exception)
+    sql = '''INSERT INTO user_stats (id, username, last_updated, following_watchlist,
+    watchlist_completion, likes_watchlist, retweets_watchlist, mentions_watchlist,
+    watchword_in_bio, is_on_watchlist) VALUES (?,?,current_timestamp,?,?,?,?,?,?,?)'''
+    cur = conn.cursor()
+    cur.execute(sql, user_stats)
 
 
 def update(conn, user_stats):
     '''Update a row in the stats table.'''
 
-    try:
-        sql = '''UPDATE user_stats SET username = ?, last_updated = current_timestamp,
-        following_watchlist = ?, watchlist_completion = ?, likes_watchlist = ?,
-        retweets_watchlist = ?, mentions_watchlist = ?, watchword_in_bio = ?,
-        is_on_watchlist = ? WHERE id = ?'''
-        cur = conn.cursor()
-        cur.execute(sql, user_stats)
-    except Exception as exception:
-        print(f"Failed to update {user_stats[0]}.")
-        print(exception)
+    sql = '''UPDATE user_stats SET username = ?, last_updated = current_timestamp,
+    following_watchlist = ?, watchlist_completion = ?, likes_watchlist = ?,
+    retweets_watchlist = ?, mentions_watchlist = ?, watchword_in_bio = ?,
+    is_on_watchlist = ? WHERE id = ?'''
+    cur = conn.cursor()
+    cur.execute(sql, user_stats)
 
 
 def exists(conn, user_id):
@@ -149,6 +133,8 @@ def detect_file_header(filename, header):
 def import_csv(filename, header):
     '''Import the CSV as a dataframe with column as header.'''
 
+    data = []
+
     if filename is not None:
         detect_file_header(filename, header)
 
@@ -157,15 +143,9 @@ def import_csv(filename, header):
             lambda x: x.lower())
 
         if header == "watchwords":
-            try:
-                data = data[header].values
-            except Exception as exception:
-                data = []
-                print(exception)
+            data = data[header].values
     else:
-        if header == "watchwords":
-            data = []
-        else:
+        if header != "watchwords":
             data = pd.DataFrame()
 
     return data
@@ -208,7 +188,7 @@ def get_user_info(username, file_path):
                     users_dataframe[users_dataframe["username"] == username],
                     cols, "user info", "w")
 
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         print(f"Failed to fetch {username} user info.")
         print(exception)
         user_id = None
@@ -236,10 +216,10 @@ def fetch_following(username):
             attempts += 1
             twint.run.Following(config)
             followers_dataframe = twint.storage.panda.Follow_df
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             print(exception)
-            print("Fetch following failed for " + username +
-                  " sleeping for " + str(attempts * SLEEP_TIME) + " milliseconds.")
+            print((f"Fetch following failed for {username} ",
+                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
             print(traceback.format_exc())
             sleep(attempts * SLEEP_TIME)
 
@@ -252,7 +232,7 @@ def fetch_following(username):
     return follower_list
 
 
-def calculate_following_stats(num_following, username, follower_list, wlist, file_path):
+def calculate_following_stats(num_following, username, follower_list, watchlist, file_path):
     '''Calculate following watchlist ratio and watchlist completion ratio.'''
 
     following_watchlist = 0
@@ -260,7 +240,7 @@ def calculate_following_stats(num_following, username, follower_list, wlist, fil
 
     if num_following > 0:
         watchlist_following = follower_list[follower_list[0].isin(
-            wlist["screen_names"])]
+            watchlist["screen_names"])]
 
         file_path = file_path + username + ".xlsx"
         cols = [0]
@@ -270,17 +250,17 @@ def calculate_following_stats(num_following, username, follower_list, wlist, fil
         if not watchlist_following.empty:
             following_watchlist = len(watchlist_following[0])/num_following
             watchlist_completion = len(
-                watchlist_following[0])/len(wlist["screen_names"])
+                watchlist_following[0])/len(watchlist["screen_names"])
 
     return following_watchlist, watchlist_completion
 
 
-def following(username, num_following, wlist, file_path):
+def following(username, num_following, watchlist, file_path):
     '''Wrapper for fetching and calculating following stats.'''
 
     follower_list = fetch_following(username)
     following_watchlist, watchlist_completion = calculate_following_stats(
-        num_following, username, follower_list, wlist, file_path)
+        num_following, username, follower_list, watchlist, file_path)
 
     return following_watchlist, watchlist_completion
 
@@ -303,10 +283,10 @@ def fetch_likes(username, limit):
             attempts += 1
             twint.run.Favorites(config)
             fetched_tweets = twint.output.tweets_list
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             print(exception)
-            print("Fetching likes failed for " + username +
-                  " sleeping for " + str(attempts * SLEEP_TIME) + " milliseconds.")
+            print((f"Fetch likes failed for {username} ",
+                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
             print(traceback.format_exc())
             sleep(attempts * SLEEP_TIME)
 
@@ -315,17 +295,17 @@ def fetch_likes(username, limit):
     return dataframe
 
 
-def calculate_like_stats(dataframe, wlist, username, file_path):
+def calculate_like_stats(dataframe, watchlist, username, file_path):
     '''Calculate the watchlist vs non-watchlist tweet like ratio.'''
 
     watchlist_intersect = 0
 
     if not dataframe.empty:
         # Don't count self.
-        wlist = wlist[wlist["screen_names"] != username]
+        watchlist = watchlist[watchlist["screen_names"] != username]
 
         dataframe_on_watchlist = dataframe[dataframe["username"].isin(
-            wlist['screen_names'])]
+            watchlist['screen_names'])]
 
         if not dataframe_on_watchlist.empty and not dataframe.empty:
             watchlist_intersect = dataframe_on_watchlist["username"].count(
@@ -340,12 +320,12 @@ def calculate_like_stats(dataframe, wlist, username, file_path):
     return watchlist_intersect
 
 
-def likes(username, limit, wlist, file_path):
+def likes(username, limit, watchlist, file_path):
     '''Wrapper function for fetching and calculating like stats.'''
 
     dataframe = fetch_likes(username, limit)
     likes_watchlist = calculate_like_stats(
-        dataframe, wlist, username, file_path)
+        dataframe, watchlist, username, file_path)
 
     return likes_watchlist
 
@@ -370,10 +350,10 @@ def fetch_tweets(username, limit):
             attempts += 1
             twint.run.Profile(config)
             fetched_tweets = twint.output.tweets_list
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             print(exception)
-            print("Fetching tweets failed for " + username +
-                  " sleeping for " + str(attempts * SLEEP_TIME) + " milliseconds.")
+            print((f"Fetch tweets failed for {username} ",
+                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
             print(traceback.format_exc())
             sleep(attempts * SLEEP_TIME)
 
@@ -394,17 +374,17 @@ def fetch_tweets(username, limit):
     return retweets, mentions, all_tweets
 
 
-def calculate_retweets(retweets, wlist, username, file_path):
+def calculate_retweets(retweets, watchlist, username, file_path):
     '''Calculate watchlist vs non-watchlist retweet ratio.'''
 
     watchlist_intersect_retweets = 0
 
     if not retweets.empty:
         # Don't count self.
-        wlist = wlist[wlist["screen_names"] != username]
+        watchlist = watchlist[watchlist["screen_names"] != username]
 
         watchlist_retweets = retweets[retweets["username"].isin(
-            wlist['screen_names'])]
+            watchlist['screen_names'])]
 
         if not watchlist_retweets.empty and not retweets.empty:
             watchlist_intersect_retweets = watchlist_retweets["username"].count(
@@ -419,20 +399,20 @@ def calculate_retweets(retweets, wlist, username, file_path):
     return watchlist_intersect_retweets
 
 
-def calculate_mentions(mentions, wlist, username, file_path):
+def calculate_mentions(mentions, watchlist, username, file_path):
     '''Calculate watchlist vs non-watchlist mention ratio.'''
 
     watchlist_intersect_mentions = 0
 
     if not mentions.empty:
         # Don't count self.
-        wlist = wlist[wlist["screen_names"] != username]
+        watchlist = watchlist[watchlist["screen_names"] != username]
 
         filtered_mentions = []
         for index, row in mentions.iterrows():  # pylint: disable=unused-variable
             if row["username"] == username:
                 for mention in row["mentions"]:
-                    if mention in wlist['screen_names'].values and mention != username:
+                    if mention in watchlist['screen_names'].values and mention != username:
                         filtered_mentions.append(row)
                         break
 
@@ -449,7 +429,7 @@ def calculate_mentions(mentions, wlist, username, file_path):
 
         if not mention_usernames.empty:
             watchlist_intersect_mentions = mention_usernames[mention_usernames["username"].isin(
-                wlist['screen_names'])]["username"].count() / len(mention_usernames.index)
+                watchlist['screen_names'])]["username"].count() / len(mention_usernames.index)
 
         file_path = file_path + username + ".xlsx"
         cols = ['tweet', 'mentions', 'username', 'likes_count', 'retweets_count', 'replies_count',
@@ -478,24 +458,25 @@ def find_watchword_tweets(all_tweets, watchwords, username, file_path):
         write_excel(file_path, filtered_tweets, cols, "watchword tweets", "a")
 
 
-def calculate_tweet_stats(retweets, mentions, all_tweets, wlist, watchwords, username, file_path):
+def calculate_tweet_stats(retweets, mentions, all_tweets,
+                          watchlist, watchwords, username, file_path):
     '''Wrapper for calculating various tweet stats.'''
 
     watchlist_intersect_retweets = calculate_retweets(
-        retweets, wlist, username, file_path)
+        retweets, watchlist, username, file_path)
     watchlist_intersect_mentions = calculate_mentions(
-        mentions, wlist, username, file_path)
+        mentions, watchlist, username, file_path)
     find_watchword_tweets(all_tweets, watchwords, username, file_path)
 
     return watchlist_intersect_retweets, watchlist_intersect_mentions
 
 
-def tweets(username, limit, wlist, watchwords, file_path):
+def tweets(username, limit, watchlist, watchwords, file_path):
     '''Wrapper function for fetching tweets and calculating stats.'''
 
     retweets, mentions, all_tweets = fetch_tweets(username, limit)
     watchlist_intersect_retweets, watchlist_intersect_mentions = calculate_tweet_stats(
-        retweets, mentions, all_tweets, wlist, watchwords, username, file_path)
+        retweets, mentions, all_tweets, watchlist, watchwords, username, file_path)
 
     return watchlist_intersect_retweets, watchlist_intersect_mentions
 
@@ -518,12 +499,12 @@ def transform_work(item):
     username = item["user"]
     file_path = item["directory"]
     database = create_connection(file_path + item["db"])
-    wlist = item["watchlist"]
+    watchlist = item["watchlist"]
     tweet_fetch_limit = item["tweet_fetch_limit"]
     tweet_ww = item["tweet_watchwords"]
     bio_ww = item["bio_watchwords"]
 
-    return username, file_path, database, wlist, tweet_fetch_limit, tweet_ww, bio_ww
+    return username, file_path, database, watchlist, tweet_fetch_limit, tweet_ww, bio_ww
 
 
 def transform_stats(username, following_watchlist, watchlist_completion, likes_watchlist,
@@ -548,11 +529,10 @@ def process_user(item):
 
     try:
         # work_item needed to be a dictionary because of the way multiprocessing works
-        username, file_path, database, wlist, tweet_fetch_limit, tweet_ww, bio_ww = transform_work(
-            item)
+        username, file_path, database, watchlist, tweet_fetch_limit, tweet_ww, bio_ww = \
+            transform_work(item)
 
-        print("PID " + str(getpid()) + " START " +
-              username + " " + str(datetime.now()))
+        print(f"PID {str(getpid())} START {username} {str(datetime.now())}")
 
         user_id, private, following_count, bio = get_user_info(
             username, file_path)
@@ -560,14 +540,14 @@ def process_user(item):
         if user_id is not None and private != 1:
 
             following_watchlist, watchlist_completion = following(
-                username, following_count, wlist, file_path)
+                username, following_count, watchlist, file_path)
             likes_watchlist = likes(
-                username, tweet_fetch_limit, wlist, file_path)
+                username, tweet_fetch_limit, watchlist, file_path)
             retweets_watchlist, mentions_watchlist = tweets(
-                username, tweet_fetch_limit, wlist, tweet_ww, file_path)
+                username, tweet_fetch_limit, watchlist, tweet_ww, file_path)
             watchword_in_bio = calculate_bio_stats(bio, bio_ww)
 
-            if username in wlist['screen_names'].values:
+            if username in watchlist['screen_names'].values:
                 is_on_watchlist = 1
             else:
                 is_on_watchlist = 0
@@ -600,12 +580,13 @@ def process_user(item):
                 database.commit()
 
             else:
-                print("Skipped insert: " + username)
+                print(f"Skipped insert: {username}")
 
-        print("PID " + str(getpid()) + " END " +
-              username + " " + str(datetime.now()))
-    except Exception as exception:
-        print(str(getpid()) + " EXCEPTION")
+        print(f"PID {str(getpid())} END {username} {str(datetime.now())}")
+    except Exception as exception:  # pylint: disable=broad-except
+        # Okay, I actually need this one, because if anything is uncaught,
+        # processes fail silently and do not pick up new work.
+        print(f"{str(getpid())} EXCEPTION")
         print(exception)
         print(traceback.format_exc())
 
@@ -616,7 +597,7 @@ def pool_handler(work_items):
     '''Pool handler for distributing work amongst processes.'''
 
     pool = Pool(cpu_count())
-    print("Parallel processing on " + str(cpu_count()) + " cores.")
+    print(f"Parallel processing on {str(cpu_count())} cores.")
     pool.map_async(process_user, work_items)
     pool.close()
     pool.join()
@@ -653,10 +634,10 @@ if __name__ == '__main__':
     WATCHLIST = import_csv(ARGS.watchlist, "screen_names")
 
     if ".db" not in ARGS.output:
-        ARGS.output = ARGS.output + ".db"
+        ARGS.output = f"{ARGS.output}.db"
 
     # Create an output directory, since several XLSX files will be produced.
-    DIRECTORY = "./" + ARGS.output.replace(".db", "") + "/"
+    DIRECTORY = f"./{ARGS.output.replace('.db', '')}/"
     if not path.exists(DIRECTORY):
         mkdir(DIRECTORY)
 

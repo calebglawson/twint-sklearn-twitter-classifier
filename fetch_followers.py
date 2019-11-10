@@ -85,7 +85,7 @@ if __name__ == '__main__':
     while FOLLOWER_LIST.empty and ATTEMPT < MAX_ATTEMPTS:
         try:
             FOLLOWER_LIST = fetch_following(ARGS.username, ARGS.limit)
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             print(f"Attempt {str(ATTEMPT)} of {str(MAX_ATTEMPTS)} failed.")
             print(exception)
 
