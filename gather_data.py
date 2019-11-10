@@ -124,7 +124,7 @@ def twint_obj_list_to_dataframe(twint_list):
 
 def write_excel(directory, dataframe, columns, worksheet, mode):
     '''Write data frame to Excel file.'''
-    if not dataframe.index.empty:
+    if not dataframe.empty:
         # https://github.com/PyCQA/pylint/issues/3060 pylint: disable=abstract-class-instantiated
         writer = pd.ExcelWriter(directory, mode=mode)
         dataframe.to_excel(writer, worksheet, columns=columns)
@@ -231,7 +231,7 @@ def fetch_following(username):
     twint.storage.panda.Follow_df = pd.DataFrame()
 
     attempts = 0
-    while followers_dataframe.index.empty and attempts < ATTEMPT_LIMIT:
+    while followers_dataframe.empty and attempts < ATTEMPT_LIMIT:
         try:
             attempts += 1
             twint.run.Following(config)
@@ -244,7 +244,7 @@ def fetch_following(username):
             sleep(attempts * SLEEP_TIME)
 
     follower_list = pd.DataFrame(columns=[0])
-    if not followers_dataframe.index.empty:
+    if not followers_dataframe.empty:
         for index, row in followers_dataframe.iteritems():  # pylint: disable=unused-variable
             follower_list = pd.DataFrame(row[0])
             follower_list[0] = follower_list[0].apply(lambda x: x.lower())
@@ -267,7 +267,7 @@ def calculate_following_stats(num_following, username, follower_list, wlist, fil
         write_excel(file_path, watchlist_following, cols,
                     "following watchlist", "a")
 
-        if not watchlist_following.index.empty:
+        if not watchlist_following.empty:
             following_watchlist = len(watchlist_following[0])/num_following
             watchlist_completion = len(
                 watchlist_following[0])/len(wlist["screen_names"])
@@ -320,14 +320,14 @@ def calculate_like_stats(dataframe, wlist, username, file_path):
 
     watchlist_intersect = 0
 
-    if not dataframe.index.empty:
+    if not dataframe.empty:
         # Don't count self.
         wlist = wlist[wlist["screen_names"] != username]
 
         dataframe_on_watchlist = dataframe[dataframe["username"].isin(
             wlist['screen_names'])]
 
-        if not dataframe_on_watchlist.index.empty and not dataframe.index.empty:
+        if not dataframe_on_watchlist.empty and not dataframe.empty:
             watchlist_intersect = dataframe_on_watchlist["username"].count(
             ) / len(dataframe.index)
 
@@ -379,7 +379,7 @@ def fetch_tweets(username, limit):
 
     dataframe = twint_obj_list_to_dataframe(fetched_tweets)
 
-    if not dataframe.index.empty:
+    if not dataframe.empty:
         # The retweets flag is broken in Twint 2.1.7
         retweets = dataframe[dataframe["username"] != username]
         # Pandas dataframe is broken for tweets in Twint 2.1.7 & 6
@@ -399,14 +399,14 @@ def calculate_retweets(retweets, wlist, username, file_path):
 
     watchlist_intersect_retweets = 0
 
-    if not retweets.index.empty:
+    if not retweets.empty:
         # Don't count self.
         wlist = wlist[wlist["screen_names"] != username]
 
         watchlist_retweets = retweets[retweets["username"].isin(
             wlist['screen_names'])]
 
-        if not watchlist_retweets.index.empty and not retweets.index.empty:
+        if not watchlist_retweets.empty and not retweets.empty:
             watchlist_intersect_retweets = watchlist_retweets["username"].count(
             ) / len(retweets["username"])
 
@@ -424,7 +424,7 @@ def calculate_mentions(mentions, wlist, username, file_path):
 
     watchlist_intersect_mentions = 0
 
-    if not mentions.index.empty:
+    if not mentions.empty:
         # Don't count self.
         wlist = wlist[wlist["screen_names"] != username]
 
@@ -447,7 +447,7 @@ def calculate_mentions(mentions, wlist, username, file_path):
         mention_usernames = pd.DataFrame(
             mention_usernames, columns=['username'])
 
-        if not mention_usernames.index.empty:
+        if not mention_usernames.empty:
             watchlist_intersect_mentions = mention_usernames[mention_usernames["username"].isin(
                 wlist['screen_names'])]["username"].count() / len(mention_usernames.index)
 
@@ -462,7 +462,7 @@ def calculate_mentions(mentions, wlist, username, file_path):
 
 def find_watchword_tweets(all_tweets, watchwords, username, file_path):
     '''Search for tweets with watchwords and phrases for Excel output only.'''
-    if not all_tweets.index.empty and watchwords.size != 0:
+    if not all_tweets.empty and watchwords.size != 0:
         filtered_tweets = []
         for index, row in all_tweets.iterrows():  # pylint: disable=unused-variable
             for watchword in watchwords:

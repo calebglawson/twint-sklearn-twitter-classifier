@@ -1,24 +1,30 @@
+''' This script fetches followers for a given user and outputs a CSV. '''
+
+from csv import QUOTE_NONNUMERIC
 import argparse
-import csv
 import pandas as pd
 import twint
 
 
 def detect_file_header(filename, header):
-    f = open(filename, "r")
-    lines = f.readlines()
+    ''' Detects if the given header is in the file.
+        If the header is not found, one is added. '''
+
+    csv = open(filename, "r")
+    lines = csv.readlines()
 
     if header not in lines[0]:
-        f.close()
-        f = open(filename, "w")
+        csv.close()
+        csv = open(filename, "w")
         lines.insert(0, header+"\n")
-        f.writelines(lines)
-        f.close()
+        csv.writelines(lines)
+        csv.close()
 
 
 def import_csv(filename, header):
+    ''' Import the given CSV as a Pandas DataFrame or arrray. '''
 
-    if filename != None:
+    if filename is not None:
         detect_file_header(filename, header)
 
         data = pd.read_csv(filename)
@@ -28,9 +34,9 @@ def import_csv(filename, header):
         if header == "watchwords":
             try:
                 data = data[header].values
-            except Exception as e:
+            except Exception as exception:
                 data = []
-                print(e)
+                print(exception)
     else:
         if header == "watchwords":
             data = []
@@ -41,68 +47,67 @@ def import_csv(filename, header):
 
 
 def fetch_following(username, limit):
-    c = twint.Config()
-    c.Username = username
-    c.Pandas = True
-    c.Hide_output = False
+    ''' Wrapper function for the twint fetch. '''
+    config = twint.Config()
+    config.Username = username
+    config.Pandas = True
+    config.Hide_output = False
 
-    if limit != None:
-        c.Limit = limit
+    if limit is not None:
+        config.Limit = limit
 
     twint.storage.panda.Follow_df = pd.DataFrame()
-    twint.run.Followers(c)
+    twint.run.Followers(config)
 
-    Followers_df = twint.storage.panda.Follow_df
-    try:
-        follower_list = pd.DataFrame(Followers_df['followers'][username])
-        follower_list[0] = follower_list[0].apply(lambda x: x.lower())
-    except:
-        follower_list = pd.DataFrame()
+    followers_df = twint.storage.panda.Follow_df
+    followers_df = pd.DataFrame(followers_df['followers'][username])
+    followers_df[0] = followers_df[0].apply(lambda x: x.lower())
 
-    return follower_list
+    return followers_df
 
 
 # MAIN
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument(
         "username", help="twitter user from whom to fetch the followers")
-    parser.add_argument("--filter", help="csv file of individuals to filter")
-    parser.add_argument(
+    PARSER.add_argument("--filter", help="csv file of individuals to filter")
+    PARSER.add_argument(
         "--output", help="specify output filename", default="followers.csv")
-    parser.add_argument("--limit", help="max followers to fetch", type=int)
+    PARSER.add_argument("--limit", help="max followers to fetch", type=int)
 
-    args = parser.parse_args()
+    ARGS = PARSER.parse_args()
 
-    if args.output != None:
-        if ".csv" not in args.output:
-            args.output = args.output + ".csv"
+    if ARGS.output is not None:
+        if ".csv" not in ARGS.output:
+            ARGS.output = ARGS.output + ".csv"
 
-    max_attempts = 5
-    attempt = 0
-    follower_list = pd.DataFrame()
+    MAX_ATTEMPTS = 5
+    ATTEMPT = 0
+    FOLLOWER_LIST = pd.DataFrame()
 
-    while len(follower_list.index) == 0 and attempt < max_attempts:
+    while FOLLOWER_LIST.empty and ATTEMPT < MAX_ATTEMPTS:
         try:
-            follower_list = fetch_following(args.username, args.limit)
-        except:
-            print(f"Attempt {str(attempt)} of {str(max_attempts)} failed.")
+            FOLLOWER_LIST = fetch_following(ARGS.username, ARGS.limit)
+        except Exception as exception:
+            print(f"Attempt {str(ATTEMPT)} of {str(MAX_ATTEMPTS)} failed.")
+            print(exception)
 
-        attempt += 1
+        ATTEMPT += 1
 
-    if len(follower_list.index) > 0:
-        watchlist = import_csv(args.filter, "screen_names")
+    if not FOLLOWER_LIST.empty:
+        WATCHLIST = import_csv(ARGS.filter, "screen_names")
 
-        if len(watchlist.index) > 0:
-            filtered_followers = []
-            for follower in follower_list[0]:
-                if follower not in watchlist['screen_names'].values:
-                    filtered_followers.append(follower.lower())
-            follower_list = pd.DataFrame(
-                filtered_followers, columns=['screen_names'])
+        if not WATCHLIST.empty:
+            FILTERED_FOLLOWERS = []
+            for follower in FOLLOWER_LIST[0]:
+                if follower not in WATCHLIST['screen_names'].values:
+                    FILTERED_FOLLOWERS.append(follower.lower())
+            FOLLOWER_LIST = pd.DataFrame(
+                FILTERED_FOLLOWERS, columns=['screen_names'])
 
-        if len(follower_list.index) > 0:
-            follower_list.to_csv(args.output, quoting=csv.QUOTE_NONNUMERIC)
-            print('Output: ' + args.output)
+        if not FOLLOWER_LIST.empty:
+            FOLLOWER_LIST.to_csv(ARGS.output, quoting=QUOTE_NONNUMERIC)
+            print('Output: ' + ARGS.output)
         else:
             print("No followers to output.")
