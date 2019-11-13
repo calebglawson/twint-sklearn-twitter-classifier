@@ -6,6 +6,7 @@ from multiprocessing import Pool, cpu_count
 from time import sleep
 from os import getpid, mkdir, path
 from datetime import datetime
+from math import ceil
 import argparse
 import sqlite3
 import traceback
@@ -485,7 +486,7 @@ def calculate_bio_stats(bio, watchwords):
     '''Search the bio for watchwords.'''
     watchword_in_bio = 0
 
-    if watchwords.size == 0:
+    if watchwords.size != 0:
         for watchword in watchwords:
             if watchword in bio:
                 watchword_in_bio = 1
@@ -593,11 +594,16 @@ def process_user(item):
     database.close()
 
 
-def pool_handler(work_items):
+def pool_handler(work_items, pool_worker_scaling):
     '''Pool handler for distributing work amongst processes.'''
 
-    pool = Pool(cpu_count())
-    print(f"Parallel processing on {str(cpu_count())} cores.")
+    num_worker_threads = ceil(float(cpu_count()) * pool_worker_scaling)
+
+    if num_worker_threads <= 0:
+        num_worker_threads = 1
+
+    pool = Pool(num_worker_threads)
+    print(f"Processing with {str(num_worker_threads)} worker process(es).")
     pool.map_async(process_user, work_items)
     pool.close()
     pool.join()
@@ -623,6 +629,10 @@ if __name__ == '__main__':
     PARSER.add_argument(
         "--tweet_fetch_limit", help="number of tweets to fetch when calculating statistics",
         default=100, type=int)
+    PARSER.add_argument(
+        "--pool_worker_scaling",
+        help="multiplied against cpu_count to determine number of worker threads",
+        default=1.0, type=float)
     GROUP = PARSER.add_mutually_exclusive_group(required=True)
     GROUP.add_argument(
         '--username', help="username of single user to fetch data on")
@@ -656,6 +666,13 @@ if __name__ == '__main__':
         USERS = import_csv(ARGS.userlist, "screen_names")
         USERS = USERS["screen_names"].values
 
+    if ARGS.username is not None:
+        ARGS.pool_worker_scaling = -1
+
+        if ARGS.pool_worker_scaling != 1:
+            print(
+                "Argument --username is provided, supplied --pool_worker_scaling is ignored.")
+
     # Build work queue.
     WORK = []
     for user in USERS:
@@ -672,6 +689,6 @@ if __name__ == '__main__':
         WORK.append(work_item)
 
     # Start work in multiple processes.
-    pool_handler(WORK)
+    pool_handler(WORK, ARGS.pool_worker_scaling)
 
     DB.close()
