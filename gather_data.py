@@ -168,6 +168,11 @@ def fetch_user_info(username):
 def get_user_info(username, file_path):
     '''Get and transform user info.'''
 
+    user_id = None
+    private = 1
+    num_following = 0
+    bio = None
+
     users_dataframe = fetch_user_info(username)
 
     try:
@@ -192,10 +197,6 @@ def get_user_info(username, file_path):
     except Exception as exception:  # pylint: disable=broad-except
         print(f"Failed to fetch {username} user info.")
         print(exception)
-        user_id = None
-        private = 1
-        num_following = 0
-        bio = None
 
     return user_id, private, num_following, bio
 
@@ -337,13 +338,16 @@ def fetch_tweets(username, limit):
     config = twint.Config()
     config.Username = username
     config.Store_object = True
-    config.Limit = limit
     config.Retweets = True
     config.Profile_full = True
     config.Hide_output = True
+    config.Limit = limit
 
     fetched_tweets = []
     twint.output.tweets_list = []
+    retweets = pd.DataFrame()
+    mentions = pd.DataFrame()
+    all_tweets = pd.DataFrame()
 
     attempts = 0
     while not fetched_tweets and attempts < ATTEMPT_LIMIT:
@@ -365,11 +369,6 @@ def fetch_tweets(username, limit):
         retweets = dataframe[dataframe["username"] != username]
         # Pandas dataframe is broken for tweets in Twint 2.1.7 & 6
         mentions = dataframe[dataframe["mentions"] != "[]"]
-        all_tweets = dataframe
-    else:
-        # If dataframe idx length is 0, then user may have no tweets.
-        retweets = dataframe
-        mentions = dataframe
         all_tweets = dataframe
 
     return retweets, mentions, all_tweets
@@ -530,8 +529,9 @@ def process_user(item):
 
     try:
         # work_item needed to be a dictionary because of the way multiprocessing works
-        username, file_path, database, watchlist, tweet_fetch_limit, tweet_ww, bio_ww = \
-            transform_work(item)
+        username, file_path, database, watchlist, \
+            tweet_fetch_limit, tweet_ww, bio_ww = transform_work(
+                item)
 
         print(f"PID {str(getpid())} START {username} {str(datetime.now())}")
 
@@ -627,12 +627,13 @@ if __name__ == '__main__':
         "--tweet_watchwords",
         help="list of watchwords to look for in tweets unique to the target group")
     PARSER.add_argument(
-        "--tweet_fetch_limit", help="number of tweets to fetch when calculating statistics",
-        default=100, type=int)
-    PARSER.add_argument(
         "--pool_worker_scaling",
         help="multiplied against cpu_count to determine number of worker threads",
         default=1.0, type=float)
+    PARSER.add_argument(
+        "--tweet_fetch_limit", help="number of tweets to fetch when calculating statistics",
+        default=100, type=int)
+
     GROUP = PARSER.add_mutually_exclusive_group(required=True)
     GROUP.add_argument(
         '--username', help="username of single user to fetch data on")
@@ -667,11 +668,10 @@ if __name__ == '__main__':
         USERS = USERS["screen_names"].values
 
     if ARGS.username is not None:
-        ARGS.pool_worker_scaling = -1
-
         if ARGS.pool_worker_scaling != 1:
             print(
                 "Argument --username is provided, supplied --pool_worker_scaling is ignored.")
+        ARGS.pool_worker_scaling = -1
 
     # Build work queue.
     WORK = []

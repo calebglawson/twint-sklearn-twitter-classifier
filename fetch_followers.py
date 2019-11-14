@@ -24,6 +24,11 @@ def detect_file_header(filename, header):
 def import_csv(filename, header):
     ''' Import the given CSV as a Pandas DataFrame or arrray. '''
 
+    if header == "watchwords":
+        data = []
+    else:
+        data = pd.DataFrame()
+
     if filename is not None:
         detect_file_header(filename, header)
 
@@ -33,11 +38,6 @@ def import_csv(filename, header):
 
         if header == "watchwords":
             data = data[header].values
-    else:
-        if header == "watchwords":
-            data = []
-        else:
-            data = pd.DataFrame()
 
     return data
 

@@ -59,6 +59,8 @@ def find_best_params(x_train, y_train, n_iter):
 def train_model(c_val, gamma, x_train, y_train, n_iter):
     '''Train the model with the user-provided params.'''
 
+    model = None
+
     if c_val is None or gamma is None:
         model = find_best_params(x_train, y_train, n_iter)
     else:
