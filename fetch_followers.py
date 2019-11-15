@@ -78,18 +78,7 @@ if __name__ == '__main__':
         if ".csv" not in ARGS.output:
             ARGS.output = f"{ARGS.output}.csv"
 
-    MAX_ATTEMPTS = 5
-    ATTEMPT = 0
-    FOLLOWER_LIST = pd.DataFrame()
-
-    while FOLLOWER_LIST.empty and ATTEMPT < MAX_ATTEMPTS:
-        try:
-            FOLLOWER_LIST = fetch_following(ARGS.username, ARGS.limit)
-        except Exception as exception:  # pylint: disable=broad-except
-            print(f"Attempt {str(ATTEMPT)} of {str(MAX_ATTEMPTS)} failed.")
-            print(exception)
-
-        ATTEMPT += 1
+    FOLLOWER_LIST = fetch_following(ARGS.username, ARGS.limit)
 
     if not FOLLOWER_LIST.empty:
         WATCHLIST = import_csv(ARGS.filter, "screen_names")

@@ -3,7 +3,6 @@ Outputs a single SQLite Database the machine learning model and Excel reports fo
 
 
 from multiprocessing import Pool, cpu_count
-from time import sleep
 from os import getpid, mkdir, path
 from datetime import datetime
 from math import ceil
@@ -209,21 +208,9 @@ def fetch_following(username):
     config.Pandas = True
     config.Hide_output = True
 
-    followers_dataframe = pd.DataFrame()
     twint.storage.panda.Follow_df = pd.DataFrame()
-
-    attempts = 0
-    while followers_dataframe.empty and attempts < ATTEMPT_LIMIT:
-        try:
-            attempts += 1
-            twint.run.Following(config)
-            followers_dataframe = twint.storage.panda.Follow_df
-        except Exception as exception:  # pylint: disable=broad-except
-            print(exception)
-            print((f"Fetch following failed for {username} ",
-                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
-            print(traceback.format_exc())
-            sleep(attempts * SLEEP_TIME)
+    twint.run.Following(config)
+    followers_dataframe = twint.storage.panda.Follow_df
 
     follower_list = pd.DataFrame(columns=[0])
     if not followers_dataframe.empty:
@@ -276,21 +263,9 @@ def fetch_likes(username, limit):
     config.Hide_output = True
     config.Limit = limit
 
-    fetched_tweets = []
     twint.output.tweets_list = []
-
-    attempts = 0
-    while not fetched_tweets and attempts < ATTEMPT_LIMIT:
-        try:
-            attempts += 1
-            twint.run.Favorites(config)
-            fetched_tweets = twint.output.tweets_list
-        except Exception as exception:  # pylint: disable=broad-except
-            print(exception)
-            print((f"Fetch likes failed for {username} ",
-                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
-            print(traceback.format_exc())
-            sleep(attempts * SLEEP_TIME)
+    twint.run.Favorites(config)
+    fetched_tweets = twint.output.tweets_list
 
     dataframe = twint_obj_list_to_dataframe(fetched_tweets)
 
@@ -343,24 +318,12 @@ def fetch_tweets(username, limit):
     config.Hide_output = True
     config.Limit = limit
 
-    fetched_tweets = []
     twint.output.tweets_list = []
     retweets = pd.DataFrame()
     mentions = pd.DataFrame()
     all_tweets = pd.DataFrame()
-
-    attempts = 0
-    while not fetched_tweets and attempts < ATTEMPT_LIMIT:
-        try:
-            attempts += 1
-            twint.run.Profile(config)
-            fetched_tweets = twint.output.tweets_list
-        except Exception as exception:  # pylint: disable=broad-except
-            print(exception)
-            print((f"Fetch tweets failed for {username} ",
-                   f"sleeping for {str(attempts * SLEEP_TIME)} milliseconds."))
-            print(traceback.format_exc())
-            sleep(attempts * SLEEP_TIME)
+    twint.run.Profile(config)
+    fetched_tweets = twint.output.tweets_list
 
     dataframe = twint_obj_list_to_dataframe(fetched_tweets)
 
@@ -608,11 +571,6 @@ def pool_handler(work_items, pool_worker_scaling):
     pool.close()
     pool.join()
 
-
-# GLOBAL VARS
-# Below are settings intended for a resiliency feature.
-ATTEMPT_LIMIT = 5
-SLEEP_TIME = 5000
 
 # MAIN
 if __name__ == '__main__':
