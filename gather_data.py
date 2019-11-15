@@ -208,9 +208,16 @@ def fetch_following(username):
     config.Pandas = True
     config.Hide_output = True
 
-    twint.storage.panda.Follow_df = pd.DataFrame()
-    twint.run.Following(config)
-    followers_dataframe = twint.storage.panda.Follow_df
+    max_attempts = 5
+    attempt = 0
+    followers_dataframe = pd.DataFrame()
+
+    while followers_dataframe.empty and attempt < max_attempts:
+        twint.storage.panda.Follow_df = pd.DataFrame()
+        twint.run.Following(config)
+        followers_dataframe = twint.storage.panda.Follow_df
+
+        attempt += 1
 
     follower_list = pd.DataFrame(columns=[0])
     if not followers_dataframe.empty:
@@ -457,96 +464,67 @@ def calculate_bio_stats(bio, watchwords):
     return watchword_in_bio
 
 
-def transform_work(item):
-    '''Unpack the dictionary passed to the process function.'''
-    username = item["user"]
-    file_path = item["directory"]
-    database = create_connection(file_path + item["db"])
-    watchlist = item["watchlist"]
-    tweet_fetch_limit = item["tweet_fetch_limit"]
-    tweet_ww = item["tweet_watchwords"]
-    bio_ww = item["bio_watchwords"]
-
-    return username, file_path, database, watchlist, tweet_fetch_limit, tweet_ww, bio_ww
-
-
-def transform_stats(username, following_watchlist, watchlist_completion, likes_watchlist,
-                    retweets_watchlist, mentions_watchlist, watchword_in_bio, is_on_watchlist):
-    '''Transform stats to dict for conversion to DataFrame and Excel output.'''
-
-    result = [{
-        "user": username,
-        "following_watchlist": following_watchlist,
-        "watchlist_completion": watchlist_completion,
-        "likes_watchlist": likes_watchlist,
-        "retweets_watchlist": retweets_watchlist,
-        "mentions_watchlist": mentions_watchlist,
-        "watchword_in_bio": watchword_in_bio,
-        "is_on_watchlist": is_on_watchlist
-    }]
-    return result
-
-
 def process_user(item):
     '''Main function for processing a user.'''
 
     try:
-        # work_item needed to be a dictionary because of the way multiprocessing works
-        username, file_path, database, watchlist, \
-            tweet_fetch_limit, tweet_ww, bio_ww = transform_work(
-                item)
+        print(
+            f"PID {str(getpid())} START {item['user']} {str(datetime.now())}")
 
-        print(f"PID {str(getpid())} START {username} {str(datetime.now())}")
+        item["db"] = create_connection(item["directory"] + item["db"])
+        stats = {"user": item["user"]}
 
         user_id, private, following_count, bio = get_user_info(
-            username, file_path)
+            item["user"], item["directory"])
         # If I  can't get user ID or if profile is private, stats are useless.
         if user_id is not None and private != 1:
 
-            following_watchlist, watchlist_completion = following(
-                username, following_count, watchlist, file_path)
-            likes_watchlist = likes(
-                username, tweet_fetch_limit, watchlist, file_path)
-            retweets_watchlist, mentions_watchlist = tweets(
-                username, tweet_fetch_limit, watchlist, tweet_ww, file_path)
-            watchword_in_bio = calculate_bio_stats(bio, bio_ww)
+            stats["following_watchlist"], stats["watchlist_completion"] = following(
+                item["user"], following_count, item["watchlist"], item["directory"])
+            stats["likes_watchlist"] = likes(
+                item["user"], item["tweet_fetch_limit"], item["watchlist"], item["directory"])
+            stats["retweets_watchlist"], stats["mentions_watchlist"] = tweets(
+                item["user"], item["tweet_fetch_limit"],
+                item["watchlist"], item["tweet_watchwords"], item["directory"])
+            stats["watchword_in_bio"] = calculate_bio_stats(
+                bio, item["bio_watchwords"])
 
-            if username in watchlist['screen_names'].values:
-                is_on_watchlist = 1
+            if item["user"] in item["watchlist"]['screen_names'].values:
+                stats["is_on_watchlist"] = 1
             else:
-                is_on_watchlist = 0
+                stats["is_on_watchlist"] = 0
 
-            stats = transform_stats(username, following_watchlist, watchlist_completion,
-                                    likes_watchlist, retweets_watchlist, mentions_watchlist,
-                                    watchword_in_bio, is_on_watchlist)
-            stats = pd.DataFrame(stats)
-            file_path = file_path + username + ".xlsx"
+            excel_stats = pd.DataFrame([stats])
+            file_path = f"{item['directory']}{item['user']}.xlsx"
             cols = ["user", "following_watchlist", "watchlist_completion", "likes_watchlist",
                     "retweets_watchlist", "mentions_watchlist", "watchword_in_bio",
                     "is_on_watchlist"]
-            write_excel(file_path, stats, cols, "user stats", "a")
+            write_excel(file_path, excel_stats, cols, "user stats", "a")
 
-            if is_on_watchlist == 0 or (is_on_watchlist == 1 and
-                                        (following_watchlist != 0 or watchlist_completion != 0 or
-                                         likes_watchlist != 0 or retweets_watchlist != 0 or
-                                         mentions_watchlist != 0)):
-                if exists(database, (user_id,)):
-                    user_row = (username, following_watchlist, watchlist_completion,
-                                likes_watchlist, retweets_watchlist, mentions_watchlist,
-                                watchword_in_bio, is_on_watchlist, user_id)
-                    update(database, user_row)
+            non_zero_stats = stats["following_watchlist"] != 0 or \
+                stats["watchlist_completion"] != 0 or stats["likes_watchlist"] != 0 \
+                or stats["retweets_watchlist"] != 0 or stats["mentions_watchlist"] != 0
+            if stats["is_on_watchlist"] == 0 or (stats["is_on_watchlist"] == 1 and non_zero_stats):
+                if exists(item["db"], (user_id,)):
+                    user_row = (item["user"], stats["following_watchlist"],
+                                stats["watchlist_completion"], stats["likes_watchlist"],
+                                stats["retweets_watchlist"], stats["mentions_watchlist"],
+                                stats["watchword_in_bio"], stats["is_on_watchlist"], user_id)
+                    update(item["db"], user_row)
                 else:
-                    user_row = (user_id, username, following_watchlist, watchlist_completion,
-                                likes_watchlist, retweets_watchlist, mentions_watchlist,
-                                watchword_in_bio, is_on_watchlist)
-                    insert(database, user_row)
+                    user_row = (user_id, item["db"], stats["following_watchlist"],
+                                stats["watchlist_completion"], stats["likes_watchlist"],
+                                stats["retweets_watchlist"], stats["mentions_watchlist"],
+                                stats["watchword_in_bio"], stats["is_on_watchlist"])
+                    insert(item["db"], user_row)
 
-                database.commit()
+                item["db"].commit()
 
             else:
-                print(f"Skipped insert: {username}")
+                print(f"Skipped insert: {item['user']}")
 
-        print(f"PID {str(getpid())} END {username} {str(datetime.now())}")
+        print(
+            f"PID {str(getpid())} END {item['user']} {str(datetime.now())}")
     except Exception as exception:  # pylint: disable=broad-except
         # Okay, I actually need this one, because if anything is uncaught,
         # processes fail silently and do not pick up new work.
@@ -554,7 +532,7 @@ def process_user(item):
         print(exception)
         print(traceback.format_exc())
 
-    database.close()
+    item['db'].close()
 
 
 def pool_handler(work_items, pool_worker_scaling):
