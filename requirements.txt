@@ -1,6 +1,5 @@
 argparse
 joblib
-numpy
 openpyxl
 pandas
 scipy

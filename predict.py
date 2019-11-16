@@ -64,24 +64,45 @@ def output_results(df_bkp, pred, proba, output):
     else:
         print("No results to output.")
 
+
+def fetch_args():
+    '''Fetch the args.'''
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "database", help="name of the db holding the twitter user stats")
+    parser.add_argument(
+        "model", help="filename of the joblibbed model")
+
+    args = parser.parse_args()
+
+    return args
+
+
+def massage(args):
+    '''Massage the args.'''
+
+    args.output = args.database.split("/")[-1]
+    args.output = args.output.split("\\")[-1]
+    args.output = args.output.split('.')[0]
+    folder = f".\\{args.output}\\"
+    args.output = f"{folder}{args.output}_predictions.xlsx"
+
+    return args
+
+
+def run(args):
+    '''Main func.'''
+    args = massage(args)
+    dataframe, df_bkp = fetch_data(args.database)
+    model = load_model(args.model)
+    pred, proba = get_predictions(dataframe, model)
+    output_results(df_bkp, pred, proba, args.output)
+
+
 # MAIN
-
-
-PARSER = argparse.ArgumentParser()
-
-PARSER.add_argument(
-    "database", help="name of the db holding the twitter user stats")
-PARSER.add_argument(
-    "model", help="filename of the joblibbed model")
-PARSER.add_argument(
-    "--output", help="filename of the predicted output", default="predictions")
-
-ARGS = PARSER.parse_args()
-
-if ".xlsx" not in ARGS.output:
-    ARGS.output = f"{ARGS.output}.xlsx"
-
-DF, DF_BKP = fetch_data(ARGS.database)
-MODEL = load_model(ARGS.model)
-PRED, PROBA = get_predictions(DF, MODEL)
-output_results(DF_BKP, PRED, PROBA, ARGS.output)
+if __name__ == "__main__":
+    ARGS = fetch_args()
+    ARGS = massage(ARGS)
+    run(ARGS)

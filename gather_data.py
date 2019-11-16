@@ -208,11 +208,10 @@ def fetch_following(username):
     config.Pandas = True
     config.Hide_output = True
 
-    max_attempts = 5
     attempt = 0
     followers_dataframe = pd.DataFrame()
 
-    while followers_dataframe.empty and attempt < max_attempts:
+    while followers_dataframe.empty and attempt < MAX_ATTEMPTS:
         twint.storage.panda.Follow_df = pd.DataFrame()
         twint.run.Following(config)
         followers_dataframe = twint.storage.panda.Follow_df
@@ -270,9 +269,15 @@ def fetch_likes(username, limit):
     config.Hide_output = True
     config.Limit = limit
 
+    attempt = 0
+    fetched_tweets = []
     twint.output.tweets_list = []
-    twint.run.Favorites(config)
-    fetched_tweets = twint.output.tweets_list
+
+    while not fetched_tweets and attempt < MAX_ATTEMPTS:
+        twint.run.Favorites(config)
+        fetched_tweets = twint.output.tweets_list
+
+        attempt += 1
 
     dataframe = twint_obj_list_to_dataframe(fetched_tweets)
 
@@ -325,12 +330,18 @@ def fetch_tweets(username, limit):
     config.Hide_output = True
     config.Limit = limit
 
+    attempt = 0
     twint.output.tweets_list = []
+    fetched_tweets = []
     retweets = pd.DataFrame()
     mentions = pd.DataFrame()
     all_tweets = pd.DataFrame()
-    twint.run.Profile(config)
-    fetched_tweets = twint.output.tweets_list
+
+    while not fetched_tweets and attempt < MAX_ATTEMPTS:
+        twint.run.Profile(config)
+        fetched_tweets = twint.output.tweets_list
+
+        attempt += 1
 
     dataframe = twint_obj_list_to_dataframe(fetched_tweets)
 
@@ -512,7 +523,7 @@ def process_user(item):
                                 stats["watchword_in_bio"], stats["is_on_watchlist"], user_id)
                     update(item["db"], user_row)
                 else:
-                    user_row = (user_id, item["db"], stats["following_watchlist"],
+                    user_row = (user_id, item["user"], stats["following_watchlist"],
                                 stats["watchlist_completion"], stats["likes_watchlist"],
                                 stats["retweets_watchlist"], stats["mentions_watchlist"],
                                 stats["watchword_in_bio"], stats["is_on_watchlist"])
@@ -550,81 +561,108 @@ def pool_handler(work_items, pool_worker_scaling):
     pool.join()
 
 
-# MAIN
-if __name__ == '__main__':
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument(
+def build_work_queue(args):
+    '''Build queue with work objs for pool.'''
+    work = []
+    for user in args.userlist:
+        work_item = {
+            "user": user,
+            "db": args.output,
+            "directory": args.directory,
+            "watchlist": args.watchlist,
+            "tweet_fetch_limit": args.tweet_fetch_limit,
+            "tweet_watchwords": args.tweet_watchwords,
+            "bio_watchwords": args.bio_watchwords
+        }
+
+        work.append(work_item)
+
+    return work
+
+
+def fetch_args():
+    '''Use argparse if main.'''
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         "watchlist", help="group of twitter users who are interesting")
-    PARSER.add_argument(
-        "output", help="specify output database")
-    PARSER.add_argument(
+    parser.add_argument(
         "--bio_watchwords", help="list of watchwords to look for in bio unique to the target group")
-    PARSER.add_argument(
+    parser.add_argument(
         "--tweet_watchwords",
         help="list of watchwords to look for in tweets unique to the target group")
-    PARSER.add_argument(
+    parser.add_argument(
         "--pool_worker_scaling",
         help="multiplied against cpu_count to determine number of worker threads",
         default=1.0, type=float)
-    PARSER.add_argument(
+    parser.add_argument(
         "--tweet_fetch_limit", help="number of tweets to fetch when calculating statistics",
         default=100, type=int)
 
-    GROUP = PARSER.add_mutually_exclusive_group(required=True)
-    GROUP.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         '--username', help="username of single user to fetch data on")
-    GROUP.add_argument(
+    group.add_argument(
         '--userlist', help="csv containing usernames to fetch data on")
 
-    ARGS = PARSER.parse_args()
+    args = parser.parse_args()
+    args.output = None
 
-    WATCHLIST = import_csv(ARGS.watchlist, "screen_names")
+    return args
 
-    if ".db" not in ARGS.output:
-        ARGS.output = f"{ARGS.output}.db"
+
+def massage(args):
+    '''Massage the arg data to build work.'''
+
+    args.watchlist = import_csv(args.watchlist, "screen_names")
+
+    if args.userlist is not None:
+        args.output = args.userlist.split("/")[-1]
+        args.output = args.userlist.split("\\")[-1]
+        args.output = args.output.split('.')[0]
+
+        args.userlist = import_csv(args.userlist, "screen_names")
+        args.userlist = args.userlist["screen_names"].values
+    else:
+        args.output = args.username
+        args.userlist = [args.username]
+
+    if ".db" not in args.output:
+        args.output = f"{args.output}.db"
 
     # Create an output directory, since several XLSX files will be produced.
-    DIRECTORY = f"./{ARGS.output.replace('.db', '')}/"
-    if not path.exists(DIRECTORY):
-        mkdir(DIRECTORY)
+    args.directory = f"./{args.output.replace('.db', '')}/"
+    if not path.exists(args.directory):
+        mkdir(args.directory)
 
-    DB = create_connection(DIRECTORY + ARGS.output)
-    if not exists_table(DB):
-        create(DB)
-    DB.close()
+    database = create_connection(args.directory + args.output)
+    if not exists_table(database):
+        create(database)
+    database.close()
 
-    BIO_WATCHWORDS = import_csv(ARGS.bio_watchwords, "watchwords")
-    TWEET_WATCHWORDS = import_csv(ARGS.tweet_watchwords, "watchwords")
+    args.bio_watchwords = import_csv(args.bio_watchwords, "watchwords")
+    args.tweet_watchwords = import_csv(args.tweet_watchwords, "watchwords")
 
-    if ARGS.username is not None:
-        USERS = [ARGS.username]
-
-    if ARGS.userlist is not None:
-        USERS = import_csv(ARGS.userlist, "screen_names")
-        USERS = USERS["screen_names"].values
-
-    if ARGS.username is not None:
-        if ARGS.pool_worker_scaling != 1:
+    if args.username is not None:
+        if args.pool_worker_scaling != 1:
             print(
                 "Argument --username is provided, supplied --pool_worker_scaling is ignored.")
-        ARGS.pool_worker_scaling = -1
+        args.pool_worker_scaling = -1
 
-    # Build work queue.
-    WORK = []
-    for user in USERS:
-        work_item = {
-            "user": user,
-            "db": ARGS.output,
-            "directory": DIRECTORY,
-            "watchlist": WATCHLIST,
-            "tweet_fetch_limit": ARGS.tweet_fetch_limit,
-            "tweet_watchwords": TWEET_WATCHWORDS,
-            "bio_watchwords": BIO_WATCHWORDS
-        }
+    return args
 
-        WORK.append(work_item)
 
-    # Start work in multiple processes.
-    pool_handler(WORK, ARGS.pool_worker_scaling)
+def run(args):
+    '''Main function.'''
+    args = massage(args)
+    work = build_work_queue(args)
+    pool_handler(work, args.pool_worker_scaling)
 
-    DB.close()
+
+# GLOBAL
+MAX_ATTEMPTS = 5
+
+# MAIN
+if __name__ == '__main__':
+    ARGS = fetch_args()
+    run(ARGS)

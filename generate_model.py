@@ -123,37 +123,57 @@ def persist_test_results_to_disk(x_test, y_test, pred, proba, bkp, test_output):
         print("No results to output.")
 
 
+def fetch_args():
+    '''Fetch arguments with argparse if called from command line.'''
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "database", help="name of the db holding the twitter user stats and labels")
+    parser.add_argument(
+        "--C", help="C value param for SVC", type=float)
+    parser.add_argument(
+        "--gamma", help="gamma value param for SVC", type=float)
+    parser.add_argument(
+        "--n_iter", help="number of iterations for randomized optimal param search",
+        type=int, default=100)
+
+    args = parser.parse_args()
+
+    return args
+
+
+def massage(args):
+    '''Format filenames for args.'''
+
+    name = args.database.split('\\')[-1]
+    name = name.split('/')[-1]
+    name = name.split('.')[0]
+    folder = f".\\{name}\\"
+    args.model_output = f"{folder}{name}.joblib"
+    args.test_output = f"{folder}{name}_test_results.xlsx"
+
+    if ".db" not in args.database:
+        args.database = f"{args.database}.db"
+
+    return args
+
+
+def run(args):
+    '''Main function.'''
+
+    args = massage(args)
+    dataframe, df_bkp = fetch_data(args.database)
+    # feature scaling did not improve performance, so it was not included.
+    x_train, x_test, y_train, y_test = tt_split(dataframe)
+    model = train_model(args.C, args.gamma, x_train, y_train, args.n_iter)
+    persist_model_to_disk(model, args.model_output)
+    pred, proba = predict(model, x_test)
+    display_stats(pred, y_test)
+    persist_test_results_to_disk(
+        x_test, y_test, pred, proba, df_bkp, args.test_output)
+
+
 # MAIN
 if __name__ == '__main__':
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument(
-        "database", help="name of the db holding the twitter user stats and labels")
-    PARSER.add_argument(
-        "--C", help="C value param for SVC", type=float)
-    PARSER.add_argument(
-        "--gamma", help="gamma value param for SVC", type=float)
-    PARSER.add_argument(
-        "--n_iter", help="number of iterations for randomized optimal param search",
-        type=int, default=50)
-    PARSER.add_argument(
-        "--model_output", help="filename of the output model", default="model")
-    PARSER.add_argument(
-        "--test_output", help="filename of the test results", default="test_results")
-
-    ARGS = PARSER.parse_args()
-
-    if ".joblib" not in ARGS.model_output:
-        ARGS.model_output = f"{ARGS.model_output}.joblib"
-
-    if ".xlsx" not in ARGS.test_output:
-        ARGS.test_output = f"{ARGS.test_output}.xlsx"
-
-    DF, DF_BKP = fetch_data(ARGS.database)
-    # Feature scaling did not improve performance, so it was not included.
-    X_TRAIN, X_TEST, Y_TRAIN, Y_TEST = tt_split(DF)
-    MODEL = train_model(ARGS.C, ARGS.gamma, X_TRAIN, Y_TRAIN, ARGS.n_iter)
-    persist_model_to_disk(MODEL, ARGS.model_output)
-    PRED, PROBA = predict(MODEL, X_TEST)
-    display_stats(PRED, Y_TEST)
-    persist_test_results_to_disk(
-        X_TEST, Y_TEST, PRED, PROBA, DF_BKP, ARGS.test_output)
+    ARGS = fetch_args()
+    run(ARGS)
