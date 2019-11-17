@@ -13,7 +13,6 @@ def massage(args):
         args.output = args.userlist.split("\\")[-1]
         args.output = args.output.split('.')[0]
     else:
-        args.userlist = args.username
         args.output = args.username
 
     folder = f".\\{args.output}\\"

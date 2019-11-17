@@ -628,7 +628,7 @@ def massage(args):
 
     if args.userlist is not None:
         args.output = args.userlist.split("/")[-1]
-        args.output = args.userlist.split("\\")[-1]
+        args.output = args.output.split("\\")[-1]
         args.output = args.output.split('.')[0]
 
         args.userlist = import_csv(args.userlist, "screen_names")

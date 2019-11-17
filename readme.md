@@ -41,6 +41,8 @@ This project takes in a list of twitter accounts, collects stats, trains a class
     * Automated pipeline that combines gather_data and generate_model to build a new, trained model.
 * prediction_pipeline.py
     * Automated pipeline that combines gather_data and predict to make predicitons off an existing model.
+* ids_to_usernames.py
+    * Converts a CSV of user IDs to screen names.
 * fetch_followers.py
     * Fetch the followers of a given user ID. Optionally filter and limit results. Outputs CSV.
 * gather_data.py
