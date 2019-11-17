@@ -1,6 +1,7 @@
 ''' This script fetches followers for a given user and outputs a CSV. '''
 
 from csv import QUOTE_NONNUMERIC
+from time import sleep
 import argparse
 import pandas as pd
 import twint
@@ -52,10 +53,22 @@ def fetch_following(username, limit):
     if limit is not None:
         config.Limit = limit
 
-    twint.storage.panda.Follow_df = pd.DataFrame()
-    twint.run.Followers(config)
+    sleep_multiplier = 5000
+    max_attempts = 5
+    attempt = 0
 
-    followers_df = twint.storage.panda.Follow_df
+    twint.storage.panda.Follow_df = pd.DataFrame()
+    followers_df = pd.DataFrame()
+
+    while followers_df.empty and attempt < max_attempts:
+        twint.run.Followers(config)
+        followers_df = twint.storage.panda.Follow_df
+
+        if attempt > 0:
+            sleep(attempt * sleep_multiplier)
+
+        attempt += 1
+
     followers_df = pd.DataFrame(followers_df['followers'][username])
     followers_df[0] = followers_df[0].apply(lambda x: x.lower())
 

@@ -6,6 +6,7 @@ from multiprocessing import Pool, cpu_count
 from os import getpid, mkdir, path
 from datetime import datetime
 from math import ceil
+from time import sleep
 import argparse
 import sqlite3
 import traceback
@@ -216,6 +217,9 @@ def fetch_following(username):
         twint.run.Following(config)
         followers_dataframe = twint.storage.panda.Follow_df
 
+        if attempt > 0:
+            sleep(attempt * SLEEP_MULTIPLIER)
+
         attempt += 1
 
     follower_list = pd.DataFrame(columns=[0])
@@ -276,6 +280,9 @@ def fetch_likes(username, limit):
     while not fetched_tweets and attempt < MAX_ATTEMPTS:
         twint.run.Favorites(config)
         fetched_tweets = twint.output.tweets_list
+
+        if attempt > 0:
+            sleep(attempt * SLEEP_MULTIPLIER)
 
         attempt += 1
 
@@ -340,6 +347,9 @@ def fetch_tweets(username, limit):
     while not fetched_tweets and attempt < MAX_ATTEMPTS:
         twint.run.Profile(config)
         fetched_tweets = twint.output.tweets_list
+
+        if attempt > 0:
+            sleep(attempt * SLEEP_MULTIPLIER)
 
         attempt += 1
 
@@ -661,6 +671,7 @@ def run(args):
 
 # GLOBAL
 MAX_ATTEMPTS = 5
+SLEEP_MULTIPLIER = 5000
 
 # MAIN
 if __name__ == '__main__':
