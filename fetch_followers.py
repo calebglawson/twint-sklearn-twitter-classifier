@@ -53,7 +53,7 @@ def fetch_following(username, limit):
     if limit is not None:
         config.Limit = limit
 
-    sleep_multiplier = 5000
+    sleep_multiplier = 5
     max_attempts = 5
     attempt = 0
 

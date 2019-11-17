@@ -671,7 +671,7 @@ def run(args):
 
 # GLOBAL
 MAX_ATTEMPTS = 5
-SLEEP_MULTIPLIER = 5000
+SLEEP_MULTIPLIER = 5
 
 # MAIN
 if __name__ == '__main__':
