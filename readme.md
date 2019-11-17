@@ -8,7 +8,7 @@ This project takes in a list of twitter accounts, collects stats, trains a class
 # Typical Workflow
 ## If You Do Not Have a Machine Learning Model
 1. Have a list of users that belong to the targed class, also known as a watchlist.
-2. Obtain a list with an equal number of users that are neutral / do not belong to the targeted class with fetch_followers.py **Example:** ```python .\fetch_followers.py example_user --filter .\watchlist.csv --output example_user_followers.csv --limit 800```
+2. Obtain a list with an equal number of users that are neutral / do not belong to the targeted class with fetch_followers.py **Example:** ```python .\fetch_followers.py example_user --filter .\watchlist.csv --limit 800```
 3. Unify the lists.
 4. Run model_pipeline.py to gather the data and generate a model. **Example:** ```python .\model_pipeline.py .\watchlist.csv --userlist .\intake.csv --tweet_watchwords .\tweet_watchwords.csv --bio_watchwords .\bio_watchwords.csv```
 ## Once You Have a Machine Learning Model

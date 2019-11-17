@@ -81,15 +81,14 @@ if __name__ == '__main__':
     PARSER.add_argument(
         "username", help="twitter user from whom to fetch the followers")
     PARSER.add_argument("--filter", help="csv file of individuals to filter")
-    PARSER.add_argument(
-        "--output", help="specify output filename", default="followers.csv")
     PARSER.add_argument("--limit", help="max followers to fetch", type=int)
 
     ARGS = PARSER.parse_args()
 
+    ARGS.output = ARGS.username
     if ARGS.output is not None:
         if ".csv" not in ARGS.output:
-            ARGS.output = f"{ARGS.output}.csv"
+            ARGS.output = f"{ARGS.output}_followers.csv"
 
     FOLLOWER_LIST = fetch_following(ARGS.username, ARGS.limit)
 
