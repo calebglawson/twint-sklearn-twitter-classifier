@@ -5,7 +5,6 @@ This project trains a machine-learning model to predict whether a user belongs i
 
 **Remember, in order to make quality predictions with a machine learning model, you will need quality data. I have been able to achieve a 94% average accuracy with this tool. With the right input, maybe you can, too.**
 
-# Use Case
 Let's say you have a list of golf enthusiast twitter accounts and would like to identify more golf enthusiasts. Instead of manually determining if a given twitter user is a golf enthusiast, you want to train a machine learning model. Let's assume that these golf enthusiasts are a tight-knit group: they follow known golf enthusiasts, they retweet known golf enthusiast's tweets, they like known golf enthusiast's tweets, they mention other known golf enthusiasts frequently. Statistics are gathered to paint a picture of each user's level of engagement with known golf enthusiast twitter accounts.  Once the model is trained on what statistics indicate an account is a golf enthusiast, we can gather the same stats for a new set of users and predict whether or not they are a golf enthusiast.
 
 # Typical Workflow
