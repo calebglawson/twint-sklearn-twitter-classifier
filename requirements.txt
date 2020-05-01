@@ -4,5 +4,4 @@ openpyxl
 pandas
 scipy
 sklearn
-sqlite3
 twint
