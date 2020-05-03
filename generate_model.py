@@ -2,6 +2,7 @@
 
 import argparse
 import sqlite3
+from pathlib import Path
 from joblib import dump
 from scipy import stats
 from sklearn.metrics import classification_report, confusion_matrix
@@ -145,15 +146,13 @@ def fetch_args():
 def massage(args):
     '''Format filenames for args.'''
 
-    name = args.database.split('\\')[-1]
-    name = name.split('/')[-1]
-    name = name.split('.')[0]
-    folder = f".\\{name}\\"
-    args.model_output = f"{folder}{name}.joblib"
-    args.test_output = f"{folder}{name}_test_results.xlsx"
+    name = Path(args.database).stem
+    directory = Path(f"./{name}/")
+    args.model_output = directory / f"{name}.joblib"
+    args.test_output = directory / f"{name}_test_results.xlsx"
 
-    if ".db" not in args.database:
-        args.database = f"{args.database}.db"
+    if args.database.suffix != ".db":
+        args.database = args.database / ".db"
 
     return args
 

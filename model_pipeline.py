@@ -1,6 +1,8 @@
 '''This script combines gather_data and generate_model to form a simpler pipeline.'''
 
 import argparse
+from pathlib import Path
+
 import gather_data
 import generate_model
 
@@ -8,12 +10,8 @@ import generate_model
 def massage(args):
     '''Below is used to deduce the name of the DB.'''
 
-    args.output = args.userlist.split("/")[-1]
-    args.output = args.userlist.split("\\")[-1]
-    args.output = args.output.split('.')[0]
-
-    folder = f".\\{args.output}\\"
-    args.database = f"{folder}{args.output}.db"
+    args.output = Path(args.userlist).stem
+    args.database = Path(args.output + f"/{args.output}.db")
 
     return args
 

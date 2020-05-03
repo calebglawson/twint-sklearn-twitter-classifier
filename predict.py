@@ -3,6 +3,7 @@
 
 import argparse
 import sqlite3
+from pathlib import Path
 from joblib import load
 import pandas as pd
 
@@ -83,11 +84,9 @@ def fetch_args():
 def massage(args):
     '''Massage the args.'''
 
-    args.output = args.database.split("/")[-1]
-    args.output = args.output.split("\\")[-1]
-    args.output = args.output.split('.')[0]
-    folder = f".\\{args.output}\\"
-    args.output = f"{folder}{args.output}_predictions.xlsx"
+    args.output = Path(args.database).stem
+    folder = Path(f"./{args.output}/")
+    args.output = folder / f"{args.output}_predictions.xlsx"
 
     return args
 

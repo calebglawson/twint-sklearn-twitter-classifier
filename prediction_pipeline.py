@@ -1,6 +1,8 @@
 '''This script combines gather_data and generate_model to form a simpler pipeline.'''
 
+from pathlib import Path
 import argparse
+
 import gather_data
 import predict
 
@@ -9,14 +11,12 @@ def massage(args):
     '''Below is used to deduce the name of the DB.'''
 
     if args.userlist is not None:
-        args.output = args.userlist.split("/")[-1]
-        args.output = args.userlist.split("\\")[-1]
-        args.output = args.output.split('.')[0]
+        args.output = Path(args.userlist).stem
     else:
         args.output = args.username
 
-    folder = f".\\{args.output}\\"
-    args.database = f"{folder}{args.output}.db"
+    folder = Path(f"./{args.output}/")
+    args.database = folder / f"{args.output}.db"
 
     return args
 

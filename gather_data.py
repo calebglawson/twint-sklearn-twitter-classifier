@@ -3,10 +3,11 @@ Outputs a single SQLite Database the machine learning model and Excel reports fo
 
 
 from multiprocessing import Pool, cpu_count
-from os import getpid, mkdir, path
+from os import getpid, mkdir
 from datetime import datetime
 from math import ceil
 from time import sleep
+from pathlib import Path
 import argparse
 import sqlite3
 import traceback
@@ -126,7 +127,7 @@ def detect_file_header(filename, header):
     if header not in lines[0]:
         csv.close()
         csv = open(filename, "w")
-        lines.insert(0, header+"\n")
+        lines.insert(0, header + "\n")
         csv.writelines(lines)
         csv.close()
 
@@ -187,7 +188,7 @@ def get_user_info(username, file_path):
         bio = users_dataframe[users_dataframe["username"]
                               == username]['bio'].values[0].lower()
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = ['name', 'username', 'followers', 'following',
                 'bio', 'tweets', 'likes', 'join_date']
         write_excel(file_path,
@@ -241,15 +242,15 @@ def calculate_following_stats(num_following, username, follower_list, watchlist,
         watchlist_following = follower_list[follower_list[0].isin(
             watchlist["screen_names"])]
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = [0]
         write_excel(file_path, watchlist_following, cols,
                     "following watchlist", "a")
 
         if not watchlist_following.empty:
-            following_watchlist = len(watchlist_following[0])/num_following
+            following_watchlist = len(watchlist_following[0]) / num_following
             watchlist_completion = len(
-                watchlist_following[0])/len(watchlist["screen_names"])
+                watchlist_following[0]) / len(watchlist["screen_names"])
 
     return following_watchlist, watchlist_completion
 
@@ -307,7 +308,7 @@ def calculate_like_stats(dataframe, watchlist, username, file_path):
             watchlist_intersect = dataframe_on_watchlist["username"].count(
             ) / len(dataframe.index)
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = ['tweet', 'username', 'likes_count', 'retweets_count', 'replies_count', 'datestamp',
                 'timestamp', 'timezone', 'link']
         write_excel(file_path, dataframe_on_watchlist,
@@ -381,7 +382,7 @@ def calculate_retweets(retweets, watchlist, username, file_path):
             watchlist_intersect_retweets = watchlist_retweets["username"].count(
             ) / len(retweets["username"])
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = ['tweet', 'username', 'likes_count', 'retweets_count', 'replies_count',
                 'datestamp', 'timestamp', 'timezone', 'link']
         write_excel(file_path, watchlist_retweets,
@@ -422,7 +423,7 @@ def calculate_mentions(mentions, watchlist, username, file_path):
             watchlist_intersect_mentions = mention_usernames[mention_usernames["username"].isin(
                 watchlist['screen_names'])]["username"].count() / len(mention_usernames.index)
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = ['tweet', 'mentions', 'username', 'likes_count', 'retweets_count', 'replies_count',
                 'datestamp', 'timestamp', 'timezone', 'link']
         write_excel(file_path, filtered_mentions,
@@ -433,7 +434,7 @@ def calculate_mentions(mentions, watchlist, username, file_path):
 
 def find_watchword_tweets(all_tweets, watchwords, username, file_path):
     '''Search for tweets with watchwords and phrases for Excel output only.'''
-    if not all_tweets.empty and watchwords.size != 0:
+    if not all_tweets.empty and watchwords:
         filtered_tweets = []
         for index, row in all_tweets.iterrows():  # pylint: disable=unused-variable
             for watchword in watchwords:
@@ -443,7 +444,7 @@ def find_watchword_tweets(all_tweets, watchwords, username, file_path):
 
         filtered_tweets = pd.DataFrame(filtered_tweets)
 
-        file_path = file_path + username + ".xlsx"
+        file_path = file_path / f"{username}.xlsx"
         cols = ['tweet', 'username', 'likes_count', 'retweets_count', 'replies_count', 'datestamp',
                 'timestamp', 'timezone', 'link']
         write_excel(file_path, filtered_tweets, cols, "watchword tweets", "a")
@@ -476,7 +477,7 @@ def calculate_bio_stats(bio, watchwords):
     '''Search the bio for watchwords.'''
     watchword_in_bio = 0
 
-    if watchwords.size != 0:
+    if watchwords:
         for watchword in watchwords:
             if watchword in bio:
                 watchword_in_bio = 1
@@ -492,7 +493,7 @@ def process_user(item):
         print(
             f"PID {str(getpid())} START {item['user']} {str(datetime.now())}")
 
-        item["db"] = create_connection(item["directory"] + item["db"])
+        item["db"] = create_connection(item["directory"] / item["db"])
         stats = {"user": item["user"]}
 
         user_id, private, following_count, bio = get_user_info(
@@ -516,7 +517,7 @@ def process_user(item):
                 stats["is_on_watchlist"] = 0
 
             excel_stats = pd.DataFrame([stats])
-            file_path = f"{item['directory']}{item['user']}.xlsx"
+            file_path = Path(f"./{item['directory']}/{item['user']}.xlsx")
             cols = ["user", "following_watchlist", "watchlist_completion", "likes_watchlist",
                     "retweets_watchlist", "mentions_watchlist", "watchword_in_bio",
                     "is_on_watchlist"]
@@ -627,10 +628,7 @@ def massage(args):
     args.watchlist = import_csv(args.watchlist, "screen_names")
 
     if args.userlist is not None:
-        args.output = args.userlist.split("/")[-1]
-        args.output = args.output.split("\\")[-1]
-        args.output = args.output.split('.')[0]
-
+        args.output = Path(args.userlist).stem
         args.userlist = import_csv(args.userlist, "screen_names")
         args.userlist = args.userlist["screen_names"].values
     else:
@@ -641,11 +639,11 @@ def massage(args):
         args.output = f"{args.output}.db"
 
     # Create an output directory, since several XLSX files will be produced.
-    args.directory = f"./{args.output.replace('.db', '')}/"
-    if not path.exists(args.directory):
+    args.directory = Path(f"./{args.output.replace('.db', '')}/")
+    if not args.directory.exists():
         mkdir(args.directory)
 
-    database = create_connection(args.directory + args.output)
+    database = create_connection(args.directory / args.output)
     if not exists_table(database):
         create(database)
     database.close()
