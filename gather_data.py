@@ -434,7 +434,7 @@ def calculate_mentions(mentions, watchlist, username, file_path):
 
 def find_watchword_tweets(all_tweets, watchwords, username, file_path):
     '''Search for tweets with watchwords and phrases for Excel output only.'''
-    if not all_tweets.empty and watchwords:
+    if not all_tweets.empty and hasattr(watchwords, "size"):
         filtered_tweets = []
         for index, row in all_tweets.iterrows():  # pylint: disable=unused-variable
             for watchword in watchwords:
@@ -477,7 +477,7 @@ def calculate_bio_stats(bio, watchwords):
     '''Search the bio for watchwords.'''
     watchword_in_bio = 0
 
-    if watchwords:
+    if hasattr(watchwords, "size"):
         for watchword in watchwords:
             if watchword in bio:
                 watchword_in_bio = 1
