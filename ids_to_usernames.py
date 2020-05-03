@@ -1,6 +1,6 @@
 ''' This script converts a CSV of user IDs to screen names. '''
+from pathlib import Path
 import argparse
-import traceback
 import pandas as pd
 import twint
 
@@ -15,7 +15,7 @@ def detect_file_header(filename, header):
     if header not in lines[0]:
         csv.close()
         csv = open(filename, "w")
-        lines.insert(0, header+"\n")
+        lines.insert(0, header + "\n")
         csv.writelines(lines)
         csv.close()
 
@@ -33,9 +33,9 @@ def fetch_user_info(user_id):
         twint.run.Lookup(config)
         users_dataframe = twint.storage.panda.User_df
         username = users_dataframe.iloc[-1]["username"]
-    except:  # pylint: disable=bare-except
+    except TypeError:
         username = user_id
-        print(traceback.format_exc())
+        print(f"Failed to fetch username for id: {user_id}")
 
     return username
 
@@ -52,9 +52,7 @@ if __name__ == '__main__':
 
     USER_IDS = pd.read_csv(ARGS.userlist)
 
-    ARGS.output = ARGS.userlist.split("/")[-1]
-    ARGS.output = ARGS.output.split("\\")[-1]
-    ARGS.output = ARGS.output.split('.')[0]
+    ARGS.output = Path(ARGS.userlist).stem
 
     FAILURES = []
     SUCCESSES = []
