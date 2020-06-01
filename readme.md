@@ -1,5 +1,3 @@
-# !! Due to recent changes on Twitter, twint is not able to fetch user ids. Things are broken right now. [Use my twint fork until main is fixed.](https://github.com/calebglawson/twint) [twint#767](https://github.com/twintproject/twint/issues/767) !!
-
 **Twint, the library used to fetch tweets, is incompatible with Python 3.8 at this time.  Please use Python 3.7 or 3.6 with these scripts until this message is removed.** [twintproject/twint#569](https://github.com/twintproject/twint/issues/569)
 
 # Summary
