@@ -1,4 +1,4 @@
-**Twint, the library used to fetch tweets, is incompatible with Python 3.8 at this time.  Please use Python 3.7 or 3.6 with these scripts until this message is removed.** [twintproject/twint#569](https://github.com/twintproject/twint/issues/569)
+**Twitter deprecated their legacy theme. Unfortunately, this means that scraping Twitter with most tools is completely broken. Twint, the library these scripts use to collect data, was impacted. This will likely not be fixed soon. Alternatives to scraping are being explored. #7**
 
 # Summary
 This project trains a machine-learning model to predict whether a user belongs in a targeted class.
