@@ -1,4 +1,4 @@
-**Twitter deprecated their legacy theme. Unfortunately, this means that scraping Twitter with most tools is completely broken. Twint, the library these scripts use to collect data, was impacted. This will likely not be fixed soon. Alternatives to scraping are being explored. #7 **
+# Twitter deprecated their legacy theme. Unfortunately, this means that scraping Twitter with most tools is completely broken. Twint, the library these scripts use to collect data, was impacted. This will likely not be fixed soon. Alternatives to scraping are being explored. [#7](https://github.com/calebglawson/twint-sklearn-twitter-classifier/issues/7)
 
 # Summary
 This project trains a machine-learning model to predict whether a user belongs in a targeted class.
